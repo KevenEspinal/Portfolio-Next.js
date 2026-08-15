@@ -1,16 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Solid background snapped to exact pixel bounds -->
-  <rect width="32" height="32" rx="6" fill="#0b0f14" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Softened dark background -->
+  <rect width="256" height="256" rx="48" fill="#0b0f14" />
 
-  <!-- Left Bracket < (Mapped to Even Coordinates) -->
-  <path d="M 4 4 L 0 16 L 4 28 L 6 28 L 2 16 L 6 4 Z" fill="#00e5a3" />
+  <!-- A single group enforcing thick, rounded strokes to force smooth anti-aliasing -->
+  <g fill="none" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Left Bracket < -->
+    <polyline points="48,68 12,128 48,188" stroke="#00e5a3" />
 
-  <!-- Letter K (Mapped to Even Coordinates) -->
-  <path d="M 8 4 H 10 V 14 L 14 4 H 16 L 12 16 L 16 28 H 14 L 10 18 V 28 H 8 Z" fill="#ffffff" />
+    <!-- Letter K -->
+    <path d="M 76 68 V 188 M 120 68 L 76 128 L 120 188" stroke="#ffffff" />
 
-  <!-- Letter E (Mapped to Even Coordinates) -->
-  <path d="M 18 4 H 24 V 8 H 20 V 14 H 24 V 18 H 20 V 24 H 24 V 28 H 18 Z" fill="#ffffff" />
+    <!-- Letter E -->
+    <path d="M 180 68 H 136 V 188 H 180 M 136 128 H 168" stroke="#ffffff" />
 
-  <!-- Right Bracket > (Mapped to Even Coordinates) -->
-  <path d="M 28 4 L 32 16 L 28 28 L 26 28 L 30 16 L 26 4 Z" fill="#00e5a3" />
+    <!-- Right Bracket > -->
+    <polyline points="208,68 244,128 208,188" stroke="#00e5a3" />
+    
+  </g>
 </svg>
