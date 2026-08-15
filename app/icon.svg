@@ -1,11 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Rounded dark background tile -->
-  <rect width="64" height="64" rx="14" fill="#0d1117" />
-  
-  <!-- Centered <KE> Logo -->
-  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', 'Segoe UI', monospace, sans-serif" font-weight="900" font-size="20">
-    <tspan fill="#00e5a3">&lt;</tspan>
-    <tspan fill="#f0f6fc">KE</tspan>
-    <tspan fill="#00e5a3">&gt;</tspan>
-  </text>
+  <!-- Rounded Dark Background -->
+  <rect width="64" height="64" rx="8" fill="#0b0f14" />
+
+  <!-- Left Bracket < (Max Height & Bold) -->
+  <polyline points="10,9 3.5,32 10,55" 
+            fill="none" 
+            stroke="#00e5a3" 
+            stroke-width="5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
+
+  <!-- Max-Height Bold 'K' -->
+  <path d="M 14.5 7 H 20 V 28 L 26 7 H 32 L 24 29.5 L 32.5 57 H 26 L 20 35 V 57 H 14.5 Z" 
+        fill="#ffffff" />
+
+  <!-- Max-Height Bold 'E' -->
+  <path d="M 34.5 7 H 49.5 V 13 H 40 V 29 H 48 V 35 H 40 V 51 H 49.5 V 57 H 34.5 Z" 
+        fill="#ffffff" />
+
+  <!-- Right Bracket > (Max Height & Bold) -->
+  <polyline points="54,9 60.5,32 54,55" 
+            fill="none" 
+            stroke="#00e5a3" 
+            stroke-width="5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
 </svg>
