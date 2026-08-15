@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Solid background snapped to exact pixel bounds -->
+  <rect width="32" height="32" rx="6" fill="#0b0f14" />
+
+  <!-- Left Bracket < (Mapped to Even Coordinates) -->
+  <path d="M 4 4 L 0 16 L 4 28 L 6 28 L 2 16 L 6 4 Z" fill="#00e5a3" />
+
+  <!-- Letter K (Mapped to Even Coordinates) -->
+  <path d="M 8 4 H 10 V 14 L 14 4 H 16 L 12 16 L 16 28 H 14 L 10 18 V 28 H 8 Z" fill="#ffffff" />
+
+  <!-- Letter E (Mapped to Even Coordinates) -->
+  <path d="M 18 4 H 24 V 8 H 20 V 14 H 24 V 18 H 20 V 24 H 24 V 28 H 18 Z" fill="#ffffff" />
+
+  <!-- Right Bracket > (Mapped to Even Coordinates) -->
+  <path d="M 28 4 L 32 16 L 28 28 L 26 28 L 30 16 L 26 4 Z" fill="#00e5a3" />
+</svg>
