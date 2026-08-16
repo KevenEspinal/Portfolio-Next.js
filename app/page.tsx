@@ -98,8 +98,10 @@ export default function Home() {
 
   const fetchLiveSkills = async () => {
     try {
-      const res = await fetch('/api/toolkit');
+      // Added { cache: 'no-store' } to force fresh data fetching
+      const res = await fetch('/api/toolkit', { cache: 'no-store' });
       const data = await res.json();
+      
       if (data && Array.isArray(data)) {
         const dbNames = data.map((item: any) => item.name);
         const notInDb = initialSkillsData.filter(skill => !dbNames.includes(skill.name));
