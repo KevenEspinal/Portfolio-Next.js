@@ -155,7 +155,7 @@ export default function SkillsSchematic() {
   };
 
   const activeSkillId = lockedSkill || hoveredSkill;
-  let activePinData = null;
+  let activePinData: { id: string, name: string, net: string, symbol: string, title: string, desc: string } | null = null;
   icChips.forEach(chip => {
     chip.leftPins.forEach(pin => { if (pin.id === activeSkillId) activePinData = pin; });
     chip.rightPins.forEach(pin => { if (pin.id === activeSkillId) activePinData = pin; });
