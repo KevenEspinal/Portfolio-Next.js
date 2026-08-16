@@ -4,6 +4,47 @@ import React, { useState, useEffect, MouseEvent, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from './context/AuthContext';
 
+const initialHeroData = {
+  name: 'Keven Espinal Hazim',
+  roles: ['Electrical Engineering', 'Embedded Systems', 'Computer Science'],
+  stats: [
+    { value: 'C++', label: 'PRIMARY' },
+    { value: 'URI', label: 'INSTITUTION' },
+    { value: '2', label: 'ACADEMIC MAJORS' }
+  ]
+};
+
+const initialProjectsData = [
+  {
+    id: "p1",
+    category: "< hardware >",
+    title: "The Do-All-Inator",
+    description: "A custom functional desktop peripheral control hub engineered using an ESP32 microcontroller. Built entirely with custom state-machine logic, active Bluetooth pairing, and optimized serial monitor communication.",
+    tags: ["ESP32", "C++"]
+  },
+  {
+    id: "p2",
+    category: "< software >",
+    title: "Autonomous Racing",
+    description: "Execution of robotics operating software (ROS2) alongside basic machine learning fundamentals for autonomous vehicle control.",
+    tags: ["ROS2", "Linux"]
+  },
+  {
+    id: "p3",
+    category: "< security >",
+    title: "Defense Protocol",
+    description: "First-place finish utilizing advanced defensive technical strategies to execute strict security problem-solving protocols.",
+    tags: ["Networking"]
+  },
+  {
+    id: "p4",
+    category: "< systems >",
+    title: "Custom Workstation",
+    description: "Procured and assembled a heavy-duty programming and processing workstation, specifically configured to maximize frame-rate performance for competitive environments.",
+    tags: ["Hardware", "Optimization"]
+  }
+];
+
 const initialSkillsData = [
   {
     id: "cpp",
@@ -81,12 +122,23 @@ export default function Home() {
   const { isAdmin } = useAuth();
   
   const [typedText, setTypedText] = useState('');
-  const fullText = 'Keven Espinal Hazim';
-
+  
+  const [heroData, setHeroData] = useState(initialHeroData);
+  const [projectsList, setProjectsList] = useState(initialProjectsData);
   const [skillsList, setSkillsList] = useState<any[]>(initialSkillsData);
+  
   const [selectedSkill, setSelectedSkill] = useState(0);
   const [terminalText, setTerminalText] = useState("");
   
+  const [isHeroModalOpen, setIsHeroModalOpen] = useState(false);
+  const [heroFormData, setHeroFormData] = useState(initialHeroData);
+
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(null);
+  const [projectFormData, setProjectFormData] = useState({
+    category: '', title: '', description: '', tagsString: ''
+  });
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -96,32 +148,46 @@ export default function Home() {
   const lastScrollTime = useRef(0);
   const toolkitRef = useRef<HTMLDivElement>(null);
 
-  const fetchLiveSkills = async () => {
+  const fetchLiveContent = async () => {
     try {
-      // Added { cache: 'no-store' } to force fresh data fetching
-      const res = await fetch('/api/toolkit', { cache: 'no-store' });
-      const data = await res.json();
-      
-      if (data && Array.isArray(data)) {
-        const dbNames = data.map((item: any) => item.name);
+      const [skillsRes, heroRes, projectsRes] = await Promise.all([
+        fetch('/api/toolkit', { cache: 'no-store' }),
+        fetch('/api/hero', { cache: 'no-store' }),
+        fetch('/api/projects', { cache: 'no-store' })
+      ]);
+
+      const skillsData = await skillsRes.json();
+      if (skillsData && Array.isArray(skillsData)) {
+        const dbNames = skillsData.map((item: any) => item.name);
         const notInDb = initialSkillsData.filter(skill => !dbNames.includes(skill.name));
-        setSkillsList([...notInDb, ...data]);
+        setSkillsList([...notInDb, ...skillsData]);
       }
+
+      const heroDbData = await heroRes.json();
+      if (heroDbData && heroDbData.name) {
+        setHeroData(heroDbData);
+      }
+
+      const projectsData = await projectsRes.json();
+      if (projectsData && Array.isArray(projectsData) && projectsData.length === 4) {
+        setProjectsList(projectsData);
+      }
+
     } catch (e) {
       console.error(e);
     }
   };
 
   useEffect(() => {
-    fetchLiveSkills();
+    fetchLiveContent();
   }, []);
 
   useEffect(() => {
     let index = 0;
     const timer = setTimeout(() => {
       const interval = setInterval(() => {
-        if (index <= fullText.length) {
-          setTypedText(fullText.slice(0, index));
+        if (index <= heroData.name.length) {
+          setTypedText(heroData.name.slice(0, index));
           index++;
         } else {
           clearInterval(interval);
@@ -130,7 +196,7 @@ export default function Home() {
       return () => clearInterval(interval);
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [heroData.name]);
 
   useEffect(() => {
     let i = 0;
@@ -178,6 +244,72 @@ export default function Home() {
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
+  const handleHeroEditClick = () => {
+    setHeroFormData(heroData);
+    setIsHeroModalOpen(true);
+  };
+
+  const handleSaveHero = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/hero', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(heroFormData),
+      });
+      if (!res.ok) {
+        alert("Failed to update Hero section.");
+        return;
+      }
+      setIsHeroModalOpen(false);
+      fetchLiveContent();
+    } catch (error) {
+      alert("Network Error");
+    }
+  };
+
+  const handleProjectEditClick = (index: number) => {
+    const proj = projectsList[index];
+    setProjectFormData({
+      category: proj.category,
+      title: proj.title,
+      description: proj.description,
+      tagsString: proj.tags.join(', ')
+    });
+    setEditingProjectIndex(index);
+    setIsProjectModalOpen(true);
+  };
+
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingProjectIndex === null) return;
+
+    const updatedProjects = [...projectsList];
+    updatedProjects[editingProjectIndex] = {
+      ...updatedProjects[editingProjectIndex],
+      category: projectFormData.category,
+      title: projectFormData.title,
+      description: projectFormData.description,
+      tags: projectFormData.tagsString.split(',').map(t => t.trim()).filter(Boolean)
+    };
+
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProjects),
+      });
+      if (!res.ok) {
+        alert("Failed to update Projects.");
+        return;
+      }
+      setIsProjectModalOpen(false);
+      fetchLiveContent();
+    } catch (error) {
+      alert("Network Error");
+    }
+  };
+
   const handleMigrateData = async () => {
     const dbNames = skillsList.filter(s => s._id).map(s => s.name);
     for (const skill of initialSkillsData) {
@@ -190,7 +322,20 @@ export default function Home() {
         });
       }
     }
-    fetchLiveSkills();
+    
+    await fetch('/api/hero', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(initialHeroData),
+    });
+
+    await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(initialProjectsData),
+    });
+
+    fetchLiveContent();
   };
 
   const handleAddNewClick = () => {
@@ -215,7 +360,6 @@ export default function Home() {
 
   const handleSaveSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       const method = editingId ? 'PUT' : 'POST';
       const body = editingId ? { _id: editingId, ...formData } : formData;
@@ -226,18 +370,16 @@ export default function Home() {
         body: JSON.stringify(body),
       });
 
-      // If the database rejects the save, show an alert and STOP.
       if (!res.ok) {
         const errorData = await res.json();
         alert(`Failed to save: ${errorData.error}`);
         return; 
       }
       
-      // If successful, close the modal and reset everything
       setIsAddModalOpen(false);
       setEditingId(null);
       setFormData({ name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: '' });
-      fetchLiveSkills();
+      fetchLiveContent();
 
     } catch (error) {
       alert("Network Error: Could not connect to the database.");
@@ -248,7 +390,7 @@ export default function Home() {
     if (!id) return; 
     await fetch(`/api/toolkit?id=${id}`, { method: 'DELETE' });
     if (selectedSkill === index) setSelectedSkill(0);
-    fetchLiveSkills();
+    fetchLiveContent();
   };
 
   return (
@@ -321,13 +463,25 @@ export default function Home() {
 
       <div className="w-full flex pt-40 pb-24 relative z-10">
         <div className="max-w-7xl mx-auto w-full px-8 flex flex-col md:flex-row justify-between items-start md:items-center">
-          <div className="w-full md:w-3/5">
+          <div className="w-full md:w-3/5 relative">
+            
+            {isAdmin && (
+              <button 
+                onClick={handleHeroEditClick}
+                className="absolute -top-10 left-0 text-xs text-[#eab308] border border-[#eab308] px-3 py-1 rounded hover:bg-[#eab308] hover:text-white transition-colors"
+              >
+                EDIT HERO SECTION
+              </button>
+            )}
+
             <div className="mb-4"><span className="font-mono text-accent text-lg font-medium">&gt;&gt; status: online</span></div>
-            <h1 className="font-bold text-6xl md:text-8xl mb-8 tracking-tighter text-[#f8fafc]">Keven Espinal Hazim.</h1>
+            <h1 className="font-bold text-6xl md:text-8xl mb-8 tracking-tighter text-[#f8fafc]">
+              {heroData.name}.
+            </h1>
             <div className="space-y-3 mb-10 border-l-4 border-accent pl-6">
-              <div className="text-2xl md:text-3xl font-light text-gray-400">Electrical Engineering</div>
-              <div className="text-2xl md:text-3xl font-light text-gray-400">Embedded Systems</div>
-              <div className="text-2xl md:text-3xl font-light text-gray-400">Computer Science</div>
+              {heroData.roles.map((role, idx) => (
+                <div key={idx} className="text-2xl md:text-3xl font-light text-gray-400">{role}</div>
+              ))}
             </div>
             <div className="flex gap-6 mt-8">
               <Link href="/resume.pdf" target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">/resume</Link>
@@ -336,18 +490,20 @@ export default function Home() {
           </div>
           <div className="hidden md:flex w-2/5 justify-end">
             <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+              
               <div onMouseMove={handleMouseMove} className="glass p-6 text-left jump-card flex flex-col justify-center">
-                <div className="text-3xl font-bold text-accent mb-1">C++</div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Primary</div>
+                <div className="text-3xl font-bold text-accent mb-1">{heroData.stats[0].value}</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{heroData.stats[0].label}</div>
               </div>
               <div onMouseMove={handleMouseMove} className="glass p-6 text-left jump-card flex flex-col justify-center">
-                <div className="text-3xl font-bold text-accent mb-1">URI</div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Institution</div>
+                <div className="text-3xl font-bold text-accent mb-1">{heroData.stats[1].value}</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{heroData.stats[1].label}</div>
               </div>
               <div onMouseMove={handleMouseMove} className="glass p-6 text-left jump-card col-span-2 flex flex-col justify-center">
-                <div className="text-3xl font-bold text-accent mb-1">2</div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Academic Majors</div>
+                <div className="text-3xl font-bold text-accent mb-1">{heroData.stats[2].value}</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{heroData.stats[2].label}</div>
               </div>
+
             </div>
           </div>
         </div>
@@ -358,53 +514,35 @@ export default function Home() {
           <div><h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">Latest Projects</h2></div>
           <div className="font-mono text-accent">01 //</div>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card block md:col-span-2 flex flex-col justify-between min-h-[300px]">
-            <div>
-              <div className="font-mono text-accent text-sm mb-4">&lt; hardware &gt;</div>
-              <h3 className="text-3xl font-bold text-[#f8fafc] mb-4">The Do-All-Inator</h3>
-              <p className="text-base text-gray-400 max-w-md">A custom functional desktop peripheral control hub engineered using an ESP32 microcontroller. Built entirely with custom state-machine logic, active Bluetooth pairing, and optimized serial monitor communication.</p>
+          {projectsList.map((project, index) => (
+            <div 
+              key={index}
+              onMouseMove={handleMouseMove} 
+              className={`glass p-8 jump-card block flex flex-col justify-between min-h-[300px] group relative ${index === 0 || index === 3 ? 'md:col-span-2' : 'md:col-span-1'}`}
+            >
+              {isAdmin && (
+                <button 
+                  onClick={() => handleProjectEditClick(index)}
+                  className="absolute top-4 right-4 text-xs text-[#eab308] border border-[#eab308] px-2 py-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#eab308] hover:text-white transition-all z-20"
+                >
+                  EDIT
+                </button>
+              )}
+              
+              <div>
+                <div className="font-mono text-accent text-sm mb-4">{project.category}</div>
+                <h3 className={`${index === 0 || index === 3 ? 'text-3xl' : 'text-2xl'} font-bold text-[#f8fafc] mb-4`}>{project.title}</h3>
+                <p className={`${index === 0 || index === 3 ? 'text-base max-w-md' : 'text-sm'} text-gray-400`}>{project.description}</p>
+              </div>
+              <div className="mt-8 flex gap-3 flex-wrap">
+                {project.tags.map((tag: string, tIdx: number) => (
+                  <span key={tIdx} className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">{tag}</span>
+                ))}
+              </div>
             </div>
-            <div className="mt-8 flex gap-3">
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">ESP32</span>
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">C++</span>
-            </div>
-          </div>
-
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card block md:col-span-1 flex flex-col justify-between min-h-[300px]">
-            <div>
-              <div className="font-mono text-accent text-sm mb-4">&lt; software &gt;</div>
-              <h3 className="text-2xl font-bold text-[#f8fafc] mb-4">Autonomous Racing</h3>
-              <p className="text-sm text-gray-400">Execution of robotics operating software (ROS2) alongside basic machine learning fundamentals for autonomous vehicle control.</p>
-            </div>
-            <div className="mt-8 flex gap-3 flex-wrap">
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">ROS2</span>
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">Linux</span>
-            </div>
-          </div>
-
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card block md:col-span-1 flex flex-col justify-between min-h-[300px]">
-            <div>
-              <div className="font-mono text-accent text-sm mb-4">&lt; security &gt;</div>
-              <h3 className="text-2xl font-bold text-[#f8fafc] mb-4">Defense Protocol</h3>
-              <p className="text-sm text-gray-400">First-place finish utilizing advanced defensive technical strategies to execute strict security problem-solving protocols.</p>
-            </div>
-            <div className="mt-8 flex gap-3 flex-wrap">
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">Networking</span>
-            </div>
-          </div>
-
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card block md:col-span-2 flex flex-col justify-between min-h-[300px]">
-            <div>
-              <div className="font-mono text-accent text-sm mb-4">&lt; systems &gt;</div>
-              <h3 className="text-3xl font-bold text-[#f8fafc] mb-4">Custom Workstation</h3>
-              <p className="text-base text-gray-400 max-w-md">Procured and assembled a heavy-duty programming and processing workstation, specifically configured to maximize frame-rate performance for competitive environments.</p>
-            </div>
-            <div className="mt-8 flex gap-3">
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">Hardware</span>
-              <span className="text-xs px-3 py-1 bg-[#1a1b1e] rounded text-gray-300 border border-[#404245]">Optimization</span>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -428,7 +566,7 @@ export default function Home() {
                 <button 
                   onClick={handleMigrateData}
                   className="px-4 py-2 rounded border border-gray-500 text-gray-500 flex items-center justify-center hover:border-white hover:text-white transition-colors font-mono text-xs tracking-widest uppercase"
-                  title="Push hardcoded skills to MongoDB"
+                  title="Push hardcoded fallback data to MongoDB"
                 >
                   Migrate Data
                 </button>
@@ -439,7 +577,6 @@ export default function Home() {
         </div>
 
         <div ref={toolkitRef} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
           <div className="col-span-1 flex flex-col justify-center gap-6 font-mono text-lg border-l border-[#2c2e33] pl-6">
             {skillsList.map((skill, index) => (
               <div key={skill._id || skill.id} className="flex items-center group relative w-full pr-4">
@@ -485,7 +622,7 @@ export default function Home() {
                   $ {skillsList[selectedSkill].exec}
                 </div>
                 
-                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base overflow-y-auto no-scrollbar max-h-[250px]">
                   {terminalText}
                 </div>
                 
@@ -526,21 +663,17 @@ export default function Home() {
       {isAddModalOpen && isAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsAddModalOpen(false)}></div>
-          <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto no-scrollbar">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1cebce] to-transparent opacity-50"></div>
-            
             <div className="flex justify-between items-center mb-6 border-b border-[#2c2e33] pb-4">
-              <p className="text-[#1cebce] font-bold text-lg">
-                {editingId ? 'Edit Existing Skill' : 'Append New Skill to Toolkit'}
-              </p>
+              <p className="text-[#1cebce] font-bold text-lg">{editingId ? 'Edit Existing Skill' : 'Append New Skill to Toolkit'}</p>
               <button onClick={() => setIsAddModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
             </div>
-
             <form onSubmit={handleSaveSkill} className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">SKILL_NAME</label>
-                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. React" />
+                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">COLOR_CLASS</label>
@@ -553,36 +686,119 @@ export default function Home() {
                   </select>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">TERMINAL_CMD</label>
-                  <input required type="text" value={formData.cmd} onChange={e => setFormData({...formData, cmd: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. cd React_Info" />
+                  <input required type="text" value={formData.cmd} onChange={e => setFormData({...formData, cmd: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">TERMINAL_EXEC</label>
-                  <input required type="text" value={formData.exec} onChange={e => setFormData({...formData, exec: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. npm start" />
+                  <input required type="text" value={formData.exec} onChange={e => setFormData({...formData, exec: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
                 </div>
               </div>
-
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">DESCRIPTION</label>
-                <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-transparent border border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] p-3 min-h-[100px] text-sm" placeholder="Detailed paragraph about this skill..." />
+                <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-transparent border border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] p-3 min-h-[100px] text-sm" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">LINK_URL</label>
-                  <input type="text" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. #work or /page" />
+                  <label className="text-xs text-gray-500 mb-1">LINK_URL (Optional)</label>
+                  <input type="text" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">LINK_TEXT</label>
-                  <input type="text" value={formData.linkText} onChange={e => setFormData({...formData, linkText: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. cd ../Projects" />
+                  <label className="text-xs text-gray-500 mb-1">LINK_TEXT (Optional)</label>
+                  <input type="text" value={formData.linkText} onChange={e => setFormData({...formData, linkText: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
                 </div>
               </div>
-
               <button type="submit" className="mt-4 border border-[#1cebce] rounded-xl text-[#1cebce] hover:bg-[#1cebce] hover:text-black transition-colors py-3 font-bold tracking-widest text-sm uppercase">
                 {editingId ? 'Push Update to Database' : 'Push to Production'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isHeroModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsHeroModalOpen(false)}></div>
+          <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#eab308] to-transparent opacity-50"></div>
+            <div className="flex justify-between items-center mb-6 border-b border-[#2c2e33] pb-4">
+              <p className="text-[#eab308] font-bold text-lg">Edit Hero Section</p>
+              <button onClick={() => setIsHeroModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
+            </div>
+            <form onSubmit={handleSaveHero} className="flex flex-col gap-6">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">MAIN_NAME</label>
+                <input required type="text" value={heroFormData.name} onChange={e => setHeroFormData({...heroFormData, name: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-2 block">ROLES_LIST</label>
+                <div className="flex flex-col gap-2">
+                  {[0, 1, 2].map(idx => (
+                    <input key={idx} required type="text" value={heroFormData.roles[idx]} onChange={e => {
+                      const newRoles = [...heroFormData.roles];
+                      newRoles[idx] = e.target.value;
+                      setHeroFormData({...heroFormData, roles: newRoles});
+                    }} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2" />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-2 block">GRID_STATISTICS</label>
+                <div className="flex flex-col gap-4">
+                  {[0, 1, 2].map(idx => (
+                    <div key={idx} className="flex gap-4">
+                      <input required type="text" placeholder="Value (e.g. C++)" value={heroFormData.stats[idx].value} onChange={e => {
+                        const newStats = [...heroFormData.stats];
+                        newStats[idx].value = e.target.value;
+                        setHeroFormData({...heroFormData, stats: newStats});
+                      }} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2 w-1/2" />
+                      <input required type="text" placeholder="Label (e.g. PRIMARY)" value={heroFormData.stats[idx].label} onChange={e => {
+                        const newStats = [...heroFormData.stats];
+                        newStats[idx].label = e.target.value;
+                        setHeroFormData({...heroFormData, stats: newStats});
+                      }} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button type="submit" className="mt-4 border border-[#eab308] rounded-xl text-[#eab308] hover:bg-[#eab308] hover:text-black transition-colors py-3 font-bold tracking-widest text-sm uppercase">
+                Update Hero Display
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isProjectModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsProjectModalOpen(false)}></div>
+          <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#eab308] to-transparent opacity-50"></div>
+            <div className="flex justify-between items-center mb-6 border-b border-[#2c2e33] pb-4">
+              <p className="text-[#eab308] font-bold text-lg">Edit Project Details</p>
+              <button onClick={() => setIsProjectModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
+            </div>
+            <form onSubmit={handleSaveProject} className="flex flex-col gap-4">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">CATEGORY_TAG</label>
+                <input required type="text" value={projectFormData.category} onChange={e => setProjectFormData({...projectFormData, category: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2" placeholder="e.g. < hardware >" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">PROJECT_TITLE</label>
+                <input required type="text" value={projectFormData.title} onChange={e => setProjectFormData({...projectFormData, title: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">DESCRIPTION</label>
+                <textarea required value={projectFormData.description} onChange={e => setProjectFormData({...projectFormData, description: e.target.value})} className="bg-transparent border border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] p-3 min-h-[100px] text-sm" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">TAGS (Comma separated)</label>
+                <input required type="text" value={projectFormData.tagsString} onChange={e => setProjectFormData({...projectFormData, tagsString: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#eab308] outline-none text-[#f8fafc] py-2" placeholder="e.g. ESP32, C++, Hardware" />
+              </div>
+              <button type="submit" className="mt-4 border border-[#eab308] rounded-xl text-[#eab308] hover:bg-[#eab308] hover:text-black transition-colors py-3 font-bold tracking-widest text-sm uppercase">
+                Push Project Update
               </button>
             </form>
           </div>
