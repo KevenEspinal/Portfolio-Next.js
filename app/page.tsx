@@ -215,24 +215,33 @@ export default function Home() {
 
   const handleSaveSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      await fetch('/api/toolkit', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: editingId, ...formData }),
-      });
-    } else {
-      await fetch('/api/toolkit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-    }
     
-    setIsAddModalOpen(false);
-    setEditingId(null);
-    setFormData({ name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: '' });
-    fetchLiveSkills();
+    try {
+      const method = editingId ? 'PUT' : 'POST';
+      const body = editingId ? { _id: editingId, ...formData } : formData;
+
+      const res = await fetch('/api/toolkit', {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      // If the database rejects the save, show an alert and STOP.
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(`Failed to save: ${errorData.error}`);
+        return; 
+      }
+      
+      // If successful, close the modal and reset everything
+      setIsAddModalOpen(false);
+      setEditingId(null);
+      setFormData({ name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: '' });
+      fetchLiveSkills();
+
+    } catch (error) {
+      alert("Network Error: Could not connect to the database.");
+    }
   };
 
   const handleDeleteSkill = async (id: string, index: number) => {
