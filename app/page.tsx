@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, MouseEvent, useRef } from 'react';
 import Link from 'next/link';
+import { useAuth } from './context/AuthContext';
 
-const skillsData = [
+const initialSkillsData = [
   {
     id: "cpp",
     name: "C++",
@@ -77,13 +78,41 @@ const skillsData = [
 ];
 
 export default function Home() {
+  const { isAdmin } = useAuth();
+  
   const [typedText, setTypedText] = useState('');
   const fullText = 'Keven Espinal Hazim';
 
+  const [skillsList, setSkillsList] = useState<any[]>(initialSkillsData);
   const [selectedSkill, setSelectedSkill] = useState(0);
   const [terminalText, setTerminalText] = useState("");
+  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: ''
+  });
+
   const lastScrollTime = useRef(0);
   const toolkitRef = useRef<HTMLDivElement>(null);
+
+  const fetchLiveSkills = async () => {
+    try {
+      const res = await fetch('/api/toolkit');
+      const data = await res.json();
+      if (data && Array.isArray(data)) {
+        const dbNames = data.map((item: any) => item.name);
+        const notInDb = initialSkillsData.filter(skill => !dbNames.includes(skill.name));
+        setSkillsList([...notInDb, ...data]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveSkills();
+  }, []);
 
   useEffect(() => {
     let index = 0;
@@ -98,13 +127,13 @@ export default function Home() {
       }, 120);
       return () => clearInterval(interval);
     }, 500);
-
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     let i = 0;
-    const fullStr = skillsData[selectedSkill].description;
+    if (!skillsList[selectedSkill]) return;
+    const fullStr = skillsList[selectedSkill].description;
     setTerminalText("");
     
     const interval = setInterval(() => {
@@ -115,13 +144,12 @@ export default function Home() {
         clearInterval(interval);
       }
     }, 8);
-
     return () => clearInterval(interval);
-  }, [selectedSkill]);
+  }, [selectedSkill, skillsList]);
 
   useEffect(() => {
     const el = toolkitRef.current;
-    if (!el) return;
+    if (!el || skillsList.length === 0) return;
 
     const handleNativeWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -129,19 +157,16 @@ export default function Home() {
       if (now - lastScrollTime.current < 40) return;
 
       if (e.deltaY > 0) {
-        setSelectedSkill((prev) => (prev + 1) % skillsData.length);
+        setSelectedSkill((prev) => (prev + 1) % skillsList.length);
       } else if (e.deltaY < 0) {
-        setSelectedSkill((prev) => (prev - 1 + skillsData.length) % skillsData.length);
+        setSelectedSkill((prev) => (prev - 1 + skillsList.length) % skillsList.length);
       }
       lastScrollTime.current = now;
     };
 
     el.addEventListener('wheel', handleNativeWheel, { passive: false });
-
-    return () => {
-      el.removeEventListener('wheel', handleNativeWheel);
-    };
-  }, []);
+    return () => el.removeEventListener('wheel', handleNativeWheel);
+  }, [skillsList.length]);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -151,18 +176,84 @@ export default function Home() {
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
+  const handleMigrateData = async () => {
+    const dbNames = skillsList.filter(s => s._id).map(s => s.name);
+    for (const skill of initialSkillsData) {
+      if (!dbNames.includes(skill.name)) {
+        const { id, ...rest } = skill;
+        await fetch('/api/toolkit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rest),
+        });
+      }
+    }
+    fetchLiveSkills();
+  };
+
+  const handleAddNewClick = () => {
+    setFormData({ name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: '' });
+    setEditingId(null);
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditClick = (skill: any) => {
+    setFormData({
+      name: skill.name,
+      colorClass: skill.colorClass,
+      cmd: skill.cmd,
+      exec: skill.exec,
+      description: skill.description,
+      link: skill.link || '',
+      linkText: skill.linkText || ''
+    });
+    setEditingId(skill._id);
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveSkill = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      await fetch('/api/toolkit', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _id: editingId, ...formData }),
+      });
+    } else {
+      await fetch('/api/toolkit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+    }
+    
+    setIsAddModalOpen(false);
+    setEditingId(null);
+    setFormData({ name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: '' });
+    fetchLiveSkills();
+  };
+
+  const handleDeleteSkill = async (id: string, index: number) => {
+    if (!id) return; 
+    await fetch(`/api/toolkit?id=${id}`, { method: 'DELETE' });
+    if (selectedSkill === index) setSelectedSkill(0);
+    fetchLiveSkills();
+  };
+
   return (
     <div className="min-h-screen h-fit w-full m-0 p-0 relative bg-[#0c0c0e] text-[#d1d0c5] font-sans overflow-x-hidden selection:bg-[#1cebce] selection:text-black">
       <style jsx global>{`
-        .text-accent {
-          color: #1cebce;
+        html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+          display: none;
         }
-        .bg-accent {
-          background-color: #1cebce;
+        html, body, * {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .border-accent {
-          border-color: #1cebce;
-        }
+        
+        .text-accent { color: #1cebce; }
+        .bg-accent { background-color: #1cebce; }
+        .border-accent { border-color: #1cebce; }
         .glass {
           background: rgba(30, 30, 34, 0.4);
           border: 1px solid rgba(255, 255, 255, 0.08);
@@ -181,16 +272,9 @@ export default function Home() {
           pointer-events: none;
           z-index: 0;
         }
-        .glass:hover::before {
-          opacity: 1;
-        }
-        .glass > * {
-          position: relative;
-          z-index: 1;
-        }
-        .jump-card {
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .glass:hover::before { opacity: 1; }
+        .glass > * { position: relative; z-index: 1; }
+        .jump-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .jump-card:hover {
           transform: translateY(-6px) scale(1.01);
           border-color: rgba(28, 235, 206, 0.4);
@@ -202,23 +286,12 @@ export default function Home() {
           color: #d1d0c5;
           transition: color 0.3s ease;
         }
-        .nav-link:hover {
-          color: #1cebce;
-        }
+        .nav-link:hover { color: #1cebce; }
         .nav-link::after {
-          content: '';
-          position: absolute;
-          left: 50%;
-          bottom: 0;
-          width: 0;
-          height: 2px;
-          background-color: #1cebce;
-          transition: width 0.3s ease-in-out;
-          transform: translateX(-50%);
+          content: ''; position: absolute; left: 50%; bottom: 0; width: 0; height: 2px;
+          background-color: #1cebce; transition: width 0.3s ease-in-out; transform: translateX(-50%);
         }
-        .nav-link:hover::after {
-          width: 100%;
-        }
+        .nav-link:hover::after { width: 100%; }
       `}</style>
 
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0c0c0e]/80 backdrop-blur-md border-b border-[#2c2e33]">
@@ -238,30 +311,16 @@ export default function Home() {
       <div className="w-full flex pt-40 pb-24 relative z-10">
         <div className="max-w-7xl mx-auto w-full px-8 flex flex-col md:flex-row justify-between items-start md:items-center">
           <div className="w-full md:w-3/5">
-            <div className="mb-4">
-              <span className="font-mono text-accent text-lg font-medium">&gt;&gt; status: online</span>
-            </div>
-            <h1 className="font-bold text-6xl md:text-8xl mb-8 tracking-tighter text-[#f8fafc]">
-              Keven Espinal Hazim.
-            </h1>
+            <div className="mb-4"><span className="font-mono text-accent text-lg font-medium">&gt;&gt; status: online</span></div>
+            <h1 className="font-bold text-6xl md:text-8xl mb-8 tracking-tighter text-[#f8fafc]">Keven Espinal Hazim.</h1>
             <div className="space-y-3 mb-10 border-l-4 border-accent pl-6">
-              <div className="text-2xl md:text-3xl font-light text-gray-400">
-                Electrical Engineering
-              </div>
-              <div className="text-2xl md:text-3xl font-light text-gray-400">
-                Embedded Systems
-              </div>
-              <div className="text-2xl md:text-3xl font-light text-gray-400">
-                Computer Science
-              </div>
+              <div className="text-2xl md:text-3xl font-light text-gray-400">Electrical Engineering</div>
+              <div className="text-2xl md:text-3xl font-light text-gray-400">Embedded Systems</div>
+              <div className="text-2xl md:text-3xl font-light text-gray-400">Computer Science</div>
             </div>
             <div className="flex gap-6 mt-8">
-              <Link href="/resume.pdf" target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">
-                /resume
-              </Link>
-              <Link href="https://github.com/KevenEspinal" target="_blank" className="px-8 py-3 border border-[#404245] text-gray-300 hover:border-accent hover:text-accent font-semibold rounded jump-card font-mono text-sm">
-                /github
-              </Link>
+              <Link href="/resume.pdf" target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">/resume</Link>
+              <Link href="https://github.com/KevenEspinal" target="_blank" className="px-8 py-3 border border-[#404245] text-gray-300 hover:border-accent hover:text-accent font-semibold rounded jump-card font-mono text-sm">/github</Link>
             </div>
           </div>
           <div className="hidden md:flex w-2/5 justify-end">
@@ -285,12 +344,9 @@ export default function Home() {
 
       <div className="w-full max-w-7xl mx-auto px-8 py-24 relative z-10" id="work">
         <div className="flex items-end justify-between mb-12 border-b border-[#2c2e33] pb-6">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">Latest Projects</h2>
-          </div>
+          <div><h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">Latest Projects</h2></div>
           <div className="font-mono text-accent">01 //</div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div onMouseMove={handleMouseMove} className="glass p-8 jump-card block md:col-span-2 flex flex-col justify-between min-h-[300px]">
             <div>
@@ -342,91 +398,185 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-7xl mx-auto px-8 py-24 relative z-10" id="skills">
+        
         <div className="flex items-end justify-between mb-12 border-b border-[#2c2e33] pb-6">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">My Toolkit</h2>
-            <p className="text-gray-400 mt-2 text-lg">Interactive module of my technical stack</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">My Toolkit</h2>
+              <p className="text-gray-400 mt-2 text-lg">Interactive module of my technical stack</p>
+            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={handleAddNewClick}
+                  className="w-10 h-10 rounded-full border border-[#1cebce] text-[#1cebce] flex items-center justify-center hover:bg-[#1cebce] hover:text-black transition-colors font-mono text-xl"
+                  title="Add New Skill"
+                >
+                  +
+                </button>
+                <button 
+                  onClick={handleMigrateData}
+                  className="px-4 py-2 rounded border border-gray-500 text-gray-500 flex items-center justify-center hover:border-white hover:text-white transition-colors font-mono text-xs tracking-widest uppercase"
+                  title="Push hardcoded skills to MongoDB"
+                >
+                  Migrate Data
+                </button>
+              </div>
+            )}
           </div>
           <div className="font-mono text-accent">02 //</div>
         </div>
 
         <div ref={toolkitRef} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
           <div className="col-span-1 flex flex-col justify-center gap-6 font-mono text-lg border-l border-[#2c2e33] pl-6">
-            {skillsData.map((skill, index) => (
-              <button
-                key={skill.id}
-                onClick={() => setSelectedSkill(index)}
-                className={`text-left transition-all duration-300 flex items-center ${
-                  selectedSkill === index
-                    ? `${skill.colorClass} font-bold translate-x-2`
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                {skill.name}
-                {selectedSkill === index && (
-                  <span className="ml-4 text-white animate-pulse">&lt;-</span>
+            {skillsList.map((skill, index) => (
+              <div key={skill._id || skill.id} className="flex items-center group relative w-full pr-4">
+                <button
+                  onClick={() => setSelectedSkill(index)}
+                  className={`text-left transition-all duration-300 flex items-center ${
+                    selectedSkill === index ? `${skill.colorClass} font-bold translate-x-2` : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  {skill.name}
+                  {selectedSkill === index && <span className="ml-4 text-white animate-pulse">&lt;-</span>}
+                </button>
+                
+                {isAdmin && skill._id && (
+                  <div className="ml-auto flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(skill); }}
+                      className="text-xs text-[#eab308] border border-[#eab308] px-2 py-1 rounded hover:bg-[#eab308] hover:text-white transition-colors"
+                      title="Edit this entry"
+                    >
+                      EDIT
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSkill(skill._id, index); }}
+                      className="text-xs text-[#ef4444] border border-[#ef4444] px-2 py-1 rounded hover:bg-[#ef4444] hover:text-white transition-colors"
+                      title="Delete this entry"
+                    >
+                      DEL
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
             ))}
           </div>
 
           <div onMouseMove={handleMouseMove} className="glass p-8 col-span-1 md:col-span-2 min-h-[350px] font-mono flex flex-col">
-            <div className="text-accent mb-6 text-lg md:text-xl">
-              {skillsData[selectedSkill].cmd} {"{"}
-            </div>
-            
-            <div className="text-gray-500 mb-4 pl-4 md:pl-8 text-sm md:text-base">
-              $ {skillsData[selectedSkill].exec}
-            </div>
-            
-            <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
-              {terminalText}
-            </div>
-
-            {terminalText.length === skillsData[selectedSkill].description.length && (
-              <div className="pl-4 md:pl-8 mt-8">
-                <Link href={skillsData[selectedSkill].link} className="text-accent hover:underline text-sm md:text-base">
-                  $ {skillsData[selectedSkill].linkText}
-                </Link>
-              </div>
+            {skillsList[selectedSkill] && (
+              <>
+                <div className="text-accent mb-6 text-lg md:text-xl">
+                  {skillsList[selectedSkill].cmd} {"{"}
+                </div>
+                <div className="text-gray-500 mb-4 pl-4 md:pl-8 text-sm md:text-base">
+                  $ {skillsList[selectedSkill].exec}
+                </div>
+                
+                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+                  {terminalText}
+                </div>
+                
+                {terminalText.length === skillsList[selectedSkill].description.length && (
+                  <div className="pl-4 md:pl-8 mt-8">
+                    <Link href={skillsList[selectedSkill].link} className="text-accent hover:underline text-sm md:text-base">
+                      $ {skillsList[selectedSkill].linkText}
+                    </Link>
+                  </div>
+                )}
+                <div className="text-accent mt-6 text-lg md:text-xl">{"}"}</div>
+              </>
             )}
-            
-            <div className="text-accent mt-6 text-lg md:text-xl">
-              {"}"}
-            </div>
           </div>
         </div>
       </div>
 
       <div className="w-full max-w-7xl mx-auto px-8 py-24 relative z-10" id="about">
         <div className="flex items-end justify-between mb-12 border-b border-[#2c2e33] pb-6">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">System Profile</h2>
-          </div>
+          <div><h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">System Profile</h2></div>
           <div className="font-mono text-accent">03 //</div>
         </div>
-
         <div onMouseMove={handleMouseMove} className="glass p-10 md:p-16 jump-card">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div>
               <h3 className="text-2xl font-bold text-[#f8fafc] mb-6">Background</h3>
-              <p className="text-gray-400 leading-relaxed mb-6">
-                I am an engineering student at the University of Rhode Island managing a rigorous academic schedule alongside commuter logistics and part-time work. I am currently pursuing a double major in Electrical Engineering and German, supplemented by a minor in Computer Science.
-              </p>
-              <p className="text-gray-400 leading-relaxed">
-                My focus lies heavily in C++ development and custom hardware assembly. I am preparing to maintain top-tier academic standing to facilitate future institutional transfer applications.
-              </p>
+              <p className="text-gray-400 leading-relaxed mb-6">I am an engineering student at the University of Rhode Island managing a rigorous academic schedule alongside commuter logistics and part-time work. I am currently pursuing a double major in Electrical Engineering and German, supplemented by a minor in Computer Science.</p>
+              <p className="text-gray-400 leading-relaxed">My focus lies heavily in C++ development and custom hardware assembly. I am preparing to maintain top-tier academic standing to facilitate future institutional transfer applications.</p>
             </div>
-
             <div>
               <h3 className="text-2xl font-bold text-[#f8fafc] mb-6">Hobbies & Optimization</h3>
-              <p className="text-gray-400 leading-relaxed">
-                When I am away from the workbench, I spend my time tuning custom PC configurations and engaging in competitive tactical gaming. I enjoy the process of carefully selecting and configuring hardware specifically to maximize frame rates and overall performance.
-              </p>
+              <p className="text-gray-400 leading-relaxed">When I am away from the workbench, I spend my time tuning custom PC configurations and engaging in competitive tactical gaming. I enjoy the process of carefully selecting and configuring hardware specifically to maximize frame rates and overall performance.</p>
             </div>
           </div>
         </div>
       </div>
+
+      {isAddModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsAddModalOpen(false)}></div>
+          <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1cebce] to-transparent opacity-50"></div>
+            
+            <div className="flex justify-between items-center mb-6 border-b border-[#2c2e33] pb-4">
+              <p className="text-[#1cebce] font-bold text-lg">
+                {editingId ? 'Edit Existing Skill' : 'Append New Skill to Toolkit'}
+              </p>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
+            </div>
+
+            <form onSubmit={handleSaveSkill} className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">SKILL_NAME</label>
+                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. React" />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">COLOR_CLASS</label>
+                  <select value={formData.colorClass} onChange={e => setFormData({...formData, colorClass: e.target.value})} className="bg-[#0c0c0e] border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2">
+                    <option value="text-[#1cebce]">Teal</option>
+                    <option value="text-[#a855f7]">Purple</option>
+                    <option value="text-[#22c55e]">Green</option>
+                    <option value="text-[#f97316]">Orange</option>
+                    <option value="text-[#ef4444]">Red</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">TERMINAL_CMD</label>
+                  <input required type="text" value={formData.cmd} onChange={e => setFormData({...formData, cmd: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. cd React_Info" />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">TERMINAL_EXEC</label>
+                  <input required type="text" value={formData.exec} onChange={e => setFormData({...formData, exec: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. npm start" />
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">DESCRIPTION</label>
+                <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-transparent border border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] p-3 min-h-[100px] text-sm" placeholder="Detailed paragraph about this skill..." />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">LINK_URL</label>
+                  <input type="text" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. #work or /page" />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-500 mb-1">LINK_TEXT</label>
+                  <input type="text" value={formData.linkText} onChange={e => setFormData({...formData, linkText: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="e.g. cd ../Projects" />
+                </div>
+              </div>
+
+              <button type="submit" className="mt-4 border border-[#1cebce] rounded-xl text-[#1cebce] hover:bg-[#1cebce] hover:text-black transition-colors py-3 font-bold tracking-widest text-sm uppercase">
+                {editingId ? 'Push Update to Database' : 'Push to Production'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,27 @@ export async function POST(request: Request) {
   }
 }
 
+// Update an existing tool in the database
+export async function PUT(request: Request) {
+  try {
+    const client = await clientPromise;
+    const db = client.db('portfolio');
+    const data = await request.json();
+    const { _id, ...updateData } = data; // Separate the ID from the rest of the data
+
+    if (_id) {
+      await db.collection('toolkit').updateOne(
+        { _id: new ObjectId(_id) },
+        { $set: updateData }
+      );
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json({ error: 'Failed to update tool' }, { status: 500 });
+  }
+}
+
 // Delete a tool from the database
 export async function DELETE(request: Request) {
   try {
