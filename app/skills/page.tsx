@@ -155,11 +155,10 @@ export default function SkillsSchematic() {
   };
 
   const activeSkillId = lockedSkill || hoveredSkill;
-  let activePinData: { id: string, name: string, net: string, symbol: string, title: string, desc: string } | null = null;
-  icChips.forEach(chip => {
-    chip.leftPins.forEach(pin => { if (pin.id === activeSkillId) activePinData = pin; });
-    chip.rightPins.forEach(pin => { if (pin.id === activeSkillId) activePinData = pin; });
-  });
+  
+  // Extract all pins into a single array, then find the active one
+  const allPins = icChips.flatMap(chip => [...chip.leftPins, ...chip.rightPins]);
+  const activePinData = allPins.find(pin => pin.id === activeSkillId) || null;
 
   return (
     <div className="min-h-screen h-fit w-full m-0 p-0 relative bg-[#0c0c0e] text-[#d1d0c5] font-sans overflow-x-clip selection:bg-[#fbbf24] selection:text-black">
