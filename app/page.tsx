@@ -228,7 +228,7 @@ export default function Home() {
           </Link>
           <div className="hidden md:flex gap-8 items-center">
             <Link href="#" className="text-sm font-medium nav-link">home</Link>
-            <Link href="#work" className="text-sm font-medium nav-link">work</Link>
+            <Link href="/work" className="text-sm font-medium nav-link">work</Link>
             <Link href="#skills" className="text-sm font-medium nav-link">skills</Link>
             <Link href="#about" className="text-sm font-medium nav-link">about</Link>
           </div>
