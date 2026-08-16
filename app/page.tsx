@@ -126,7 +126,7 @@ export default function Home() {
     const handleNativeWheel = (e: WheelEvent) => {
       e.preventDefault();
       const now = Date.now();
-      if (now - lastScrollTime.current < 150) return;
+      if (now - lastScrollTime.current < 40) return;
 
       if (e.deltaY > 0) {
         setSelectedSkill((prev) => (prev + 1) % skillsData.length);
