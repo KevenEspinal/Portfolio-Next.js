@@ -3,9 +3,85 @@
 import React, { useState, useEffect, MouseEvent } from 'react';
 import Link from 'next/link';
 
+const skillsData = [
+  {
+    id: "cpp",
+    name: "C++",
+    colorClass: "text-[#a855f7]",
+    cmd: "cd C++_Keven_Information",
+    exec: "./run_firmware.sh",
+    description: "I have utilized C++ for several years as my primary language for data structures and embedded hardware programming. It forms the backbone of the custom state-machine logic and firmware utilized in the Do-All-Inator.",
+    link: "#work",
+    linkText: "cd ../Projects/Do-All-Inator"
+  },
+  {
+    id: "python",
+    name: "Python",
+    colorClass: "text-[#a855f7]",
+    cmd: "cd Python_Scripts",
+    exec: "python3 machine_learning_init.py",
+    description: "I leverage Python for high-level scripting, rapid prototyping, and integrating logic alongside my microprocessor coursework.",
+    link: "#work",
+    linkText: "cat related_projects.txt"
+  },
+  {
+    id: "ros2",
+    name: "ROS2 & Linux",
+    colorClass: "text-[#a855f7]",
+    cmd: "cd Robotics_OS",
+    exec: "ros2 launch nav2_bringup navigation_launch.py",
+    description: "I execute robotics operating software alongside basic machine learning fundamentals for autonomous vehicle control within the Autonomous Racing Car Club.",
+    link: "#work",
+    linkText: "cd ../Projects/Autonomous-Racing"
+  },
+  {
+    id: "hardware",
+    name: "Embedded Hardware",
+    colorClass: "text-[#22c55e]",
+    cmd: "cd Embedded_Systems",
+    exec: "make flash monitor",
+    description: "I engineer and assemble custom desktop peripherals using ESP32 and STM32 microcontrollers, rotary encoders, and digital displays. I manage live Bluetooth pairing and optimize serial monitor communication lines.",
+    link: "#work",
+    linkText: "cd ../Projects/Hardware"
+  },
+  {
+    id: "systems",
+    name: "Systems Optimization",
+    colorClass: "text-[#22c55e]",
+    cmd: "cd Custom_Workstation",
+    exec: "sudo lshw -C display",
+    description: "I procure and assemble heavy-duty programming workstations. I specifically configure and tune hardware setups to maximize frame-rate performance for competitive tactical titles like Valorant, Overwatch, and Apex Legends.",
+    link: "#work",
+    linkText: "cd ../Projects/Workstation"
+  },
+  {
+    id: "cyber",
+    name: "Cybersecurity",
+    colorClass: "text-[#22c55e]",
+    cmd: "cd Defense_Protocol",
+    exec: "nmap -sV -p- 192.168.1.1",
+    description: "I apply advanced defensive technical strategies to execute strict security problem-solving protocols, which contributed to a first-place finish in a campus cybersecurity competition.",
+    link: "#work",
+    linkText: "cd ../Projects/Defense"
+  },
+  {
+    id: "linguistics",
+    name: "Linguistics",
+    colorClass: "text-[#f97316]",
+    cmd: "cd Linguistics_Profile",
+    exec: "cat languages.json",
+    description: "I am fluent in both English and Spanish. I am currently pursuing a double major in German for advanced proficiency, and I possess a basic working proficiency in Italian.",
+    link: "#about",
+    linkText: "cd ../About_Me"
+  }
+];
+
 export default function Home() {
   const [typedText, setTypedText] = useState('');
   const fullText = 'Keven Espinal Hazim';
+
+  const [selectedSkill, setSelectedSkill] = useState(0);
+  const [terminalText, setTerminalText] = useState("");
 
   useEffect(() => {
     let index = 0;
@@ -23,6 +99,23 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    let i = 0;
+    const fullStr = skillsData[selectedSkill].description;
+    setTerminalText("");
+    
+    const interval = setInterval(() => {
+      if (i <= fullStr.length) {
+        setTerminalText(fullStr.slice(0, i));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 8);
+
+    return () => clearInterval(interval);
+  }, [selectedSkill]);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -99,18 +192,6 @@ export default function Home() {
         }
         .nav-link:hover::after {
           width: 100%;
-        }
-        .skill-pill-purple {
-          border-color: #a855f7;
-          background: linear-gradient(90deg, rgba(168,85,247,0.15), rgba(192,132,252,0.15));
-        }
-        .skill-pill-green {
-          border-color: #22c55e;
-          background: linear-gradient(90deg, rgba(34,197,94,0.15), rgba(74,222,128,0.15));
-        }
-        .skill-pill-orange {
-          border-color: #f97316;
-          background: linear-gradient(90deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15));
         }
       `}</style>
 
@@ -237,64 +318,55 @@ export default function Home() {
       <div className="w-full max-w-7xl mx-auto px-8 py-24 relative z-10" id="skills">
         <div className="flex items-end justify-between mb-12 border-b border-[#2c2e33] pb-6">
           <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">Top Skills</h2>
-            <p className="text-gray-400 mt-2 text-lg">Fast snapshot of my technical stack</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#f8fafc] tracking-tight">My Toolkit</h2>
+            <p className="text-gray-400 mt-2 text-lg">Interactive module of my technical stack</p>
           </div>
           <div className="font-mono text-accent">02 //</div>
         </div>
 
-        <div className="space-y-8">
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card">
-            <h3 className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-6">Programming & Software</h3>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-purple text-white hover:brightness-110 transition-all cursor-default">
-                💻 C++
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-purple text-white hover:brightness-110 transition-all cursor-default">
-                💻 Python
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-purple text-white hover:brightness-110 transition-all cursor-default">
-                ⚙️ ROS2
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-purple text-white hover:brightness-110 transition-all cursor-default">
-                🐧 Linux
-              </span>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="col-span-1 flex flex-col justify-center gap-6 font-mono text-lg border-l border-[#2c2e33] pl-6">
+            {skillsData.map((skill, index) => (
+              <button
+                key={skill.id}
+                onClick={() => setSelectedSkill(index)}
+                className={`text-left transition-all duration-300 flex items-center ${
+                  selectedSkill === index
+                    ? `${skill.colorClass} font-bold translate-x-2`
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {skill.name}
+                {selectedSkill === index && (
+                  <span className="ml-4 text-white animate-pulse">&lt;-</span>
+                )}
+              </button>
+            ))}
           </div>
 
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card">
-            <h3 className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-6">Hardware Engineering</h3>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-green text-white hover:brightness-110 transition-all cursor-default">
-                🔌 ESP32 Microcontrollers
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-green text-white hover:brightness-110 transition-all cursor-default">
-                🔌 STM32 Architecture
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-green text-white hover:brightness-110 transition-all cursor-default">
-                📟 Rotary Encoders
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-green text-white hover:brightness-110 transition-all cursor-default">
-                🖥️ Systems Assembly
-              </span>
+          <div onMouseMove={handleMouseMove} className="glass p-8 col-span-1 md:col-span-2 min-h-[350px] font-mono flex flex-col">
+            <div className="text-accent mb-6 text-lg md:text-xl">
+              {skillsData[selectedSkill].cmd} {"{"}
             </div>
-          </div>
+            
+            <div className="text-gray-500 mb-4 pl-4 md:pl-8 text-sm md:text-base">
+              $ {skillsData[selectedSkill].exec}
+            </div>
+            
+            <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+              {terminalText}
+            </div>
 
-          <div onMouseMove={handleMouseMove} className="glass p-8 jump-card">
-            <h3 className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-6">Linguistics</h3>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-orange text-white hover:brightness-110 transition-all cursor-default">
-                🗣️ English (Fluent)
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-orange text-white hover:brightness-110 transition-all cursor-default">
-                🗣️ Spanish (Fluent)
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-orange text-white hover:brightness-110 transition-all cursor-default">
-                🗣️ German (Advanced)
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border skill-pill-orange text-white hover:brightness-110 transition-all cursor-default">
-                🗣️ Italian (Basic)
-              </span>
+            {terminalText.length === skillsData[selectedSkill].description.length && (
+              <div className="pl-4 md:pl-8 mt-8">
+                <Link href={skillsData[selectedSkill].link} className="text-accent hover:underline text-sm md:text-base">
+                  $ {skillsData[selectedSkill].linkText}
+                </Link>
+              </div>
+            )}
+            
+            <div className="text-accent mt-6 text-lg md:text-xl">
+              {"}"}
             </div>
           </div>
         </div>
