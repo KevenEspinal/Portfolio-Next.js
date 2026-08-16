@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, MouseEvent } from 'react';
+import React, { useState, useEffect, MouseEvent, useRef, WheelEvent } from 'react';
 import Link from 'next/link';
 
 const skillsData = [
@@ -82,6 +82,7 @@ export default function Home() {
 
   const [selectedSkill, setSelectedSkill] = useState(0);
   const [terminalText, setTerminalText] = useState("");
+  const lastScrollTime = useRef(0);
 
   useEffect(() => {
     let index = 0;
@@ -123,6 +124,18 @@ export default function Home() {
     const y = e.clientY - rect.top;
     e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+  };
+
+  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    if (now - lastScrollTime.current < 150) return;
+
+    if (e.deltaY > 0) {
+      setSelectedSkill((prev) => (prev + 1) % skillsData.length);
+    } else if (e.deltaY < 0) {
+      setSelectedSkill((prev) => (prev - 1 + skillsData.length) % skillsData.length);
+    }
+    lastScrollTime.current = now;
   };
 
   return (
@@ -324,7 +337,7 @@ export default function Home() {
           <div className="font-mono text-accent">02 //</div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8" onWheel={handleWheel}>
           <div className="col-span-1 flex flex-col justify-center gap-6 font-mono text-lg border-l border-[#2c2e33] pl-6">
             {skillsData.map((skill, index) => (
               <button
