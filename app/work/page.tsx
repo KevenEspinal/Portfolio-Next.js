@@ -280,7 +280,7 @@ export default function Work() {
 
         <div className="flex flex-col gap-12">
           {projectsList.map((project) => (
-            <div key={project._id || project.id} onMouseMove={handleMouseMove} className="glass p-8 md:p-12 flex flex-col md:flex-row gap-8 items-start group relative">
+            <div key={project._id || project.id} onMouseMove={handleMouseMove} className="glass p-8 md:p-12 flex flex-col group relative">
               
               {isAdmin && project._id && (
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-20">
@@ -299,54 +299,66 @@ export default function Work() {
                 </div>
               )}
 
-              <div className="w-full md:w-1/2 flex flex-col">
-                <h2 className="text-3xl md:text-4xl font-bold text-[#f8fafc] mb-4">{project.title}</h2>
-                <p className="text-gray-400 mb-8 text-lg leading-relaxed">{project.synopsis}</p>
+              {/* Top Row: 50/50 Split for Synopsis and Image Gallery */}
+              <div className="flex flex-col md:flex-row gap-8 items-start w-full">
                 
-                <button 
-                  onClick={() => toggleProject(project._id || project.id)} 
-                  className="text-accent font-mono text-3xl self-start hover:text-white transition-colors animate-pulse"
-                >
-                  &lt;/&gt;
-                </button>
+                <div className="w-full md:w-1/2 flex flex-col">
+                  <h2 className="text-3xl md:text-4xl font-bold text-[#f8fafc] mb-4">{project.title}</h2>
+                  <p className="text-gray-400 mb-8 text-lg leading-relaxed">{project.synopsis}</p>
+                  
+                  <button 
+                    onClick={() => toggleProject(project._id || project.id)} 
+                    className="text-accent font-mono text-3xl self-start hover:text-white transition-colors animate-pulse"
+                    title={openProject === (project._id || project.id) ? "Collapse Details" : "Expand Details"}
+                  >
+                    &lt;/&gt;
+                  </button>
+                </div>
 
-                <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full ${openProject === (project._id || project.id) ? 'max-h-[1200px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}`}>
-                  <div className="p-8 bg-[#1a1b1e] border border-[#2c2e33] rounded-lg text-white flex flex-col gap-6">
-                    <p className="text-base leading-relaxed text-gray-300">
-                      {project.details}
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#2c2e33]">
-                      <div>
-                        <span className="text-accent font-mono text-sm block mb-2">Software & Tools:</span>
-                        <p className="text-sm text-gray-400">{project.software ? project.software.join(", ") : ''}</p>
-                      </div>
-                      <div>
-                        <span className="text-accent font-mono text-sm block mb-2">Applied Skills:</span>
-                        <p className="text-sm text-gray-400">{project.skills ? project.skills.join(", ") : ''}</p>
-                      </div>
+                <div className="w-full md:w-1/2 min-h-[320px] bg-[#151619] border border-[#2c2e33] rounded-xl flex flex-col items-center justify-center overflow-hidden shrink-0 shadow-inner p-4 gap-4">
+                  {project.images && project.images.length > 0 ? (
+                    <div className={`grid ${project.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3 w-full h-full flex-grow`}>
+                      {project.images.map((imgUrl: string, imgIdx: number) => (
+                        <div key={imgIdx} className="relative w-full h-full min-h-[12rem] rounded-lg overflow-hidden border border-[#2c2e33] flex items-center justify-center bg-[#0c0c0e]">
+                          <img src={imgUrl} alt={`Project Preview ${imgIdx}`} className="object-contain w-full h-full p-2" />
+                        </div>
+                      ))}
                     </div>
+                  ) : (
+                    <span className="text-gray-600 font-mono text-sm tracking-widest">[ IMAGE_RENDER_PENDING ]</span>
+                  )}
+                </div>
 
+              </div>
+
+              {/* Bottom Row: Full Width Expanded Details */}
+              <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full ${openProject === (project._id || project.id) ? 'max-h-[2500px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}`}>
+                <div className="p-8 md:p-10 bg-[#1a1b1e] border border-[#2c2e33] rounded-lg text-white flex flex-col gap-6 shadow-xl">
+                  
+                  {/* whitespace-pre-wrap ensures your line breaks and paragraphs render perfectly */}
+                  <p className="text-base leading-relaxed text-gray-300 whitespace-pre-wrap">
+                    {project.details}
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[#2c2e33]">
+                    <div>
+                      <span className="text-accent font-mono text-sm block mb-2">Software & Tools:</span>
+                      <p className="text-sm text-gray-400">{project.software ? project.software.join(", ") : ''}</p>
+                    </div>
+                    <div>
+                      <span className="text-accent font-mono text-sm block mb-2">Applied Skills:</span>
+                      <p className="text-sm text-gray-400">{project.skills ? project.skills.join(", ") : ''}</p>
+                    </div>
+                  </div>
+
+                  {project.repo && (
                     <a href={project.repo} target="_blank" rel="noreferrer" className="text-accent font-mono text-sm hover:underline mt-4 inline-block">
                       &gt;&gt; Access Source Code Repository
                     </a>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              <div className="w-full md:w-1/2 min-h-[320px] bg-[#151619] border border-[#2c2e33] rounded-xl flex flex-col items-center justify-center overflow-hidden shrink-0 shadow-inner p-4 gap-4">
-                {project.images && project.images.length > 0 ? (
-                  <div className={`grid ${project.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3 w-full h-full flex-grow`}>
-                    {project.images.map((imgUrl: string, imgIdx: number) => (
-                      <div key={imgIdx} className="relative w-full h-full min-h-[12rem] rounded-lg overflow-hidden border border-[#2c2e33] flex items-center justify-center bg-[#0c0c0e]">
-                        <img src={imgUrl} alt={`Project Preview ${imgIdx}`} className="object-contain w-full h-full p-2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-600 font-mono text-sm tracking-widest">[ IMAGE_RENDER_PENDING ]</span>
-                )}
-              </div>
             </div>
           ))}
         </div>
