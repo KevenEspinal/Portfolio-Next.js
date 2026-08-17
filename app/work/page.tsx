@@ -336,10 +336,10 @@ export default function Work() {
 
               <div className="w-full md:w-1/2 min-h-[320px] bg-[#151619] border border-[#2c2e33] rounded-xl flex flex-col items-center justify-center overflow-hidden shrink-0 shadow-inner p-4 gap-4">
                 {project.images && project.images.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 w-full h-full">
+                  <div className={`grid ${project.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3 w-full h-full flex-grow`}>
                     {project.images.map((imgUrl: string, imgIdx: number) => (
-                      <div key={imgIdx} className="relative h-44 rounded-lg overflow-hidden border border-[#2c2e33]">
-                        <img src={imgUrl} alt={`Project Preview ${imgIdx}`} className="object-cover w-full h-full" />
+                      <div key={imgIdx} className="relative w-full h-full min-h-[12rem] rounded-lg overflow-hidden border border-[#2c2e33] flex items-center justify-center bg-[#0c0c0e]">
+                        <img src={imgUrl} alt={`Project Preview ${imgIdx}`} className="object-contain w-full h-full p-2" />
                       </div>
                     ))}
                   </div>
