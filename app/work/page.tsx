@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, MouseEvent } from 'react';
+import React, { useState, useEffect, MouseEvent, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 
@@ -54,6 +54,10 @@ export default function Work() {
   const [projectsList, setProjectsList] = useState<any[]>(initialProjectsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Editor States
+  const [isEditorExpanded, setIsEditorExpanded] = useState(false);
+  const detailsRef = useRef<HTMLTextAreaElement>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -107,6 +111,7 @@ export default function Work() {
   const handleAddClick = () => {
     setFormData({ title: '', synopsis: '', details: '', softwareStr: '', skillsStr: '', repo: '', images: [] });
     setEditingId(null);
+    setIsEditorExpanded(false);
     setIsModalOpen(true);
   };
 
@@ -121,7 +126,27 @@ export default function Work() {
       images: project.images || []
     });
     setEditingId(project._id);
+    setIsEditorExpanded(false);
     setIsModalOpen(true);
+  };
+
+  // Custom HTML Tag Injector for the Details Textarea
+  const insertFormatting = (before: string, after: string) => {
+    const el = detailsRef.current;
+    if (!el) return;
+    
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = formData.details;
+    
+    const newText = text.substring(0, start) + before + text.substring(start, end) + after + text.substring(end);
+    setFormData({ ...formData, details: newText });
+    
+    // Automatically re-focus the user's cursor inside the new tags
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + before.length, end + before.length);
+    }, 0);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,7 +324,6 @@ export default function Work() {
                 </div>
               )}
 
-              {/* Top Row: 50/50 Split for Synopsis and Image Gallery */}
               <div className="flex flex-col md:flex-row gap-8 items-start w-full">
                 
                 <div className="w-full md:w-1/2 flex flex-col">
@@ -331,14 +355,14 @@ export default function Work() {
 
               </div>
 
-              {/* Bottom Row: Full Width Expanded Details */}
               <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full ${openProject === (project._id || project.id) ? 'max-h-[2500px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}`}>
                 <div className="p-8 md:p-10 bg-[#1a1b1e] border border-[#2c2e33] rounded-lg text-white flex flex-col gap-6 shadow-xl">
                   
-                  {/* whitespace-pre-wrap ensures your line breaks and paragraphs render perfectly */}
-                  <p className="text-base leading-relaxed text-gray-300 whitespace-pre-wrap">
-                    {project.details}
-                  </p>
+                  {/* DangerouslySetInnerHTML allows the injected HTML tags from the editor to render perfectly */}
+                  <div 
+                    className="text-base leading-relaxed text-gray-300 whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: project.details }}
+                  />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[#2c2e33]">
                     <div>
@@ -367,6 +391,7 @@ export default function Work() {
       {isModalOpen && isAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsModalOpen(false)}></div>
+          
           <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1cebce] to-transparent opacity-50"></div>
             
@@ -375,20 +400,58 @@ export default function Work() {
               <button onClick={() => setIsModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
             </div>
 
-            <form onSubmit={handleSaveProject} className="flex flex-col gap-4">
+            <form onSubmit={handleSaveProject} className="flex flex-col gap-4 relative">
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">PROJECT_TITLE</label>
                 <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
               </div>
+              
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">SYNOPSIS</label>
                 <input required type="text" value={formData.synopsis} onChange={e => setFormData({...formData, synopsis: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
               </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1">FULL_DETAILS</label>
-                <textarea required value={formData.details} onChange={e => setFormData({...formData, details: e.target.value})} className="bg-transparent border border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] p-3 min-h-[100px] text-sm" />
+
+              {/* Advanced Expandable Text Editor */}
+              <div className={`transition-all duration-300 ${isEditorExpanded ? 'fixed inset-4 md:inset-12 z-[200] bg-[#0a0a0c] border border-[#1cebce] rounded-2xl p-6 md:p-8 flex flex-col shadow-[0_0_100px_rgba(28,235,206,0.15)]' : 'flex flex-col relative'}`}>
+                
+                <div className="flex justify-between items-end mb-2">
+                  <label className="text-xs text-gray-500">FULL_DETAILS</label>
+                  {isEditorExpanded && (
+                    <button type="button" onClick={() => setIsEditorExpanded(false)} className="text-[#1cebce] hover:text-white text-xs font-bold tracking-widest">[ COLLAPSE EDITOR ]</button>
+                  )}
+                </div>
+
+                {/* Formatting Toolbar */}
+                <div className="flex items-center gap-2 mb-2 p-1.5 bg-[#1a1b1e] border border-[#2c2e33] rounded overflow-x-auto no-scrollbar">
+                  <button type="button" onClick={() => insertFormatting('<b>', '</b>')} className="px-3 py-1 bg-[#0c0c0e] rounded text-xs hover:text-[#1cebce] transition-colors border border-transparent hover:border-[#1cebce]">
+                    <span className="font-bold">B</span>
+                  </button>
+                  <div className="w-px h-4 bg-[#2c2e33]"></div>
+                  <button type="button" onClick={() => insertFormatting('<ul style="list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0;">\n  <li>', '</li>\n</ul>')} className="px-3 py-1 bg-[#0c0c0e] rounded text-xs hover:text-[#1cebce] transition-colors border border-transparent hover:border-[#1cebce]">
+                    • List
+                  </button>
+                  <div className="w-px h-4 bg-[#2c2e33]"></div>
+                  <button type="button" onClick={() => insertFormatting('<span style="font-size: 1.25em; color: white;">', '</span>')} className="px-3 py-1 bg-[#0c0c0e] rounded text-xs hover:text-[#1cebce] transition-colors border border-transparent hover:border-[#1cebce]">
+                    Size +
+                  </button>
+                  
+                  {!isEditorExpanded && (
+                    <button type="button" onClick={() => setIsEditorExpanded(true)} className="ml-auto px-3 py-1 bg-transparent border border-[#1cebce] text-[#1cebce] rounded text-xs hover:bg-[#1cebce] hover:text-black transition-colors font-bold tracking-widest">
+                      EXPAND
+                    </button>
+                  )}
+                </div>
+
+                <textarea 
+                  ref={detailsRef}
+                  required 
+                  value={formData.details} 
+                  onChange={e => setFormData({...formData, details: e.target.value})} 
+                  className={`bg-transparent border border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] p-3 text-sm font-sans w-full ${isEditorExpanded ? 'flex-grow resize-none' : 'min-h-[120px]'}`} 
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-4 mt-2">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">SOFTWARE & TOOLS (Comma separated)</label>
                   <input type="text" value={formData.softwareStr} onChange={e => setFormData({...formData, softwareStr: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="C++, PlatformIO" />
@@ -398,6 +461,7 @@ export default function Work() {
                   <input type="text" value={formData.skillsStr} onChange={e => setFormData({...formData, skillsStr: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="Embedded Systems" />
                 </div>
               </div>
+              
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">REPOSITORY_URL</label>
                 <input type="text" value={formData.repo} onChange={e => setFormData({...formData, repo: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="https://github.com/..." />
