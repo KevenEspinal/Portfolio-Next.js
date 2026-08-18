@@ -65,44 +65,18 @@ const icChipsLayout = [
   {
     id: "U1",
     offsetClass: "md:-translate-x-[15%]",
-    traceOut: (
-      <div className="group/trace w-full h-32 relative hidden md:block">
-        <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2 transition-colors" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <path d="M 35 0 L 35 20 L 80 20 L 80 80 L 65 80 L 65 100" vectorEffect="non-scaling-stroke" className="group-hover/trace:stroke-[#fbbf24]" />
-        </svg>
-        <div className="absolute top-[20%] left-[80%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute top-[80%] left-[65%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
-        <span className="absolute top-[10%] left-[82%] text-xs font-mono text-gray-600 group-hover/trace:text-[#fbbf24] transition-colors">JMP_A1</span>
-      </div>
-    ),
     leftPinIds: ["esp32", "stm32"],
     rightPinIds: ["cpp", "rotary", "i2c"]
   },
   {
     id: "U2",
     offsetClass: "md:translate-x-[15%]",
-    traceOut: (
-      <div className="group/trace w-full h-40 relative hidden md:block">
-        <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2 transition-colors" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <path d="M 65 0 L 65 30 L 20 30 L 20 70 L 45 70 L 45 100" vectorEffect="non-scaling-stroke" className="group-hover/trace:stroke-[#fbbf24]" />
-        </svg>
-        <div className="absolute top-[30%] left-[20%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute top-[70%] left-[45%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
-      </div>
-    ),
     leftPinIds: ["python", "ros2", "linux"],
     rightPinIds: ["ml", "bash"]
   },
   {
     id: "U3",
     offsetClass: "md:-translate-x-[5%]",
-    traceOut: (
-      <div className="group/trace flex w-full h-20 relative hidden md:block">
-        <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <path d="M 45 0 L 45 50 L 50 50 L 50 100" vectorEffect="non-scaling-stroke" />
-        </svg>
-      </div>
-    ),
     leftPinIds: ["sys", "therm"],
     rightPinIds: ["frame", "sec"]
   }
@@ -128,7 +102,8 @@ export default function SkillsSchematic() {
     name: '',
     net: '',
     title: '',
-    desc: ''
+    desc: '',
+    symbol: 'none'
   });
 
   const fetchLiveSkills = async () => {
@@ -212,7 +187,8 @@ export default function SkillsSchematic() {
       name: skill.name || '',
       net: skill.net || '',
       title: skill.title || '',
-      desc: skill.desc || ''
+      desc: skill.desc || '',
+      symbol: skill.symbol || 'none'
     });
     setEditingId(skill._id || null);
     setIsEditorExpanded(false);
@@ -226,7 +202,8 @@ export default function SkillsSchematic() {
       name: chip.name || '',
       net: '',
       title: '',
-      desc: ''
+      desc: '',
+      symbol: 'none'
     });
     setEditingId(chip._id || null);
     setIsModalOpen(true);
@@ -259,7 +236,8 @@ export default function SkillsSchematic() {
         ...(formData.type === 'pin' && {
           net: formData.net,
           title: formData.title,
-          desc: formData.desc
+          desc: formData.desc,
+          symbol: formData.symbol
         })
       };
 
@@ -284,8 +262,15 @@ export default function SkillsSchematic() {
     }
   };
 
+  // Securely find active pin data without relying on the 'type' field to support legacy database entries
   const activeSkillId = lockedSkill || hoveredSkill;
-  const activePinData = skillsList.find(pin => pin.id === activeSkillId && pin.type === 'pin') || null;
+  let activePinData = skillsList.find(pin => pin.id === activeSkillId);
+  if (!activePinData) {
+    activePinData = initialSkillsData.find(pin => pin.id === activeSkillId);
+  }
+  
+  // A valid informational pin is strictly defined as any object possessing a 'title' (Chips do not have titles)
+  const isValidPin = Boolean(activePinData && activePinData.title);
 
   return (
     <div className="min-h-screen h-fit w-full m-0 p-0 relative bg-[#0c0c0e] text-[#d1d0c5] font-sans overflow-x-clip selection:bg-[#fbbf24] selection:text-black">
@@ -392,7 +377,10 @@ export default function SkillsSchematic() {
                       {chip.leftPinIds.map((pinId) => {
                         const pin = skillsList.find(p => p.id === pinId) || initialSkillsData.find(p => p.id === pinId);
                         if (!pin) return null;
+                        
                         const isActive = activeSkillId === pin.id;
+                        const pinSymbol = pin.symbol || initialSkillsData.find(p => p.id === pinId)?.symbol;
+
                         return (
                           <div 
                             key={pin.id} 
@@ -405,10 +393,10 @@ export default function SkillsSchematic() {
                             <span className={`font-mono text-xs md:text-sm mx-3 transition-colors ${isActive ? 'text-[#fbbf24]' : 'text-[#1cebce] group-hover:text-[#1cebce]/80'}`}>{pin.net}</span>
                             <div className={`hidden md:flex items-center w-16 lg:w-32 transition-colors justify-end ${isActive ? 'text-[#fbbf24]' : 'text-[#2c2e33] group-hover:text-gray-500'}`}>
                               <div className="h-[2px] flex-grow bg-current"></div>
-                              {pin.symbol === 'resistor' && <Resistor />}
-                              {pin.symbol === 'crystal' && <Crystal />}
-                              {pin.symbol === 'capacitor' && <Capacitor />}
-                              {pin.symbol === 'switch' && <Switch />}
+                              {pinSymbol === 'resistor' && <Resistor />}
+                              {pinSymbol === 'crystal' && <Crystal />}
+                              {pinSymbol === 'capacitor' && <Capacitor />}
+                              {pinSymbol === 'switch' && <Switch />}
                               <div className="h-[2px] w-4 bg-current"></div>
                               <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                             </div>
@@ -417,21 +405,21 @@ export default function SkillsSchematic() {
                       })}
                     </div>
 
-                    <div className={`w-full md:w-56 lg:w-72 bg-[#0a0a0c] border-2 rounded-sm relative flex flex-col items-center justify-center py-10 md:py-20 shadow-[0_0_20px_rgba(0,0,0,0.8)] z-10 order-1 md:order-2 mb-8 md:mb-0 transition-colors ${activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'border-[#fbbf24]' : 'border-[#2c2e33]'}`}>
+                    <div className={`w-full md:w-56 lg:w-72 bg-[#0a0a0c] border-2 rounded-sm relative flex flex-col items-center justify-center py-10 md:py-20 shadow-[0_0_20px_rgba(0,0,0,0.8)] z-10 order-1 md:order-2 mb-8 md:mb-0 transition-colors ${isValidPin && activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'border-[#fbbf24]' : 'border-[#2c2e33]'}`}>
                       <div className="hidden md:block absolute -top-6 left-1/2 -translate-x-1/2 w-[2px] h-6 bg-[#2c2e33]">
                         <div className="absolute -top-[18px] left-1/2 -translate-x-1/2 text-[#2c2e33] rotate-90 scale-100">
                           <Capacitor />
                         </div>
                       </div>
 
-                      <div className={`hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-8 h-4 border-b-2 rounded-b-full bg-[#0c0c0e] transition-colors ${activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'border-[#fbbf24]' : 'border-[#2c2e33]'}`}></div>
+                      <div className={`hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-8 h-4 border-b-2 rounded-b-full bg-[#0c0c0e] transition-colors ${isValidPin && activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'border-[#fbbf24]' : 'border-[#2c2e33]'}`}></div>
                       
                       <div className="text-gray-600 font-mono text-sm absolute top-3 left-3">{chip.id}</div>
                       
                       {isAdmin && (
                         <button 
                           onClick={() => handleEditChip(chipData)}
-                          className="absolute top-3 right-3 text-[10px] text-[#eab308] border border-[#eab308] px-2 py-0.5 rounded hover:bg-[#eab308] hover:text-white transition-colors"
+                          className="absolute top-3 right-3 text-[10px] text-[#eab308] border border-[#eab308] px-2 py-0.5 rounded hover:bg-[#eab308] hover:text-white transition-colors z-20 cursor-pointer"
                         >
                           EDIT
                         </button>
@@ -439,7 +427,7 @@ export default function SkillsSchematic() {
 
                       <div className="text-[#f8fafc] font-mono text-xl md:text-2xl font-bold tracking-widest text-center px-4">{chipName}</div>
                       
-                      <div className={`hidden md:block absolute bottom-3 left-3 w-2.5 h-2.5 rounded-full transition-colors ${activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'bg-[#fbbf24]' : 'bg-[#2c2e33]'}`}></div>
+                      <div className={`hidden md:block absolute bottom-3 left-3 w-2.5 h-2.5 rounded-full transition-colors ${isValidPin && activePinData && chip.leftPinIds.concat(chip.rightPinIds).includes(activePinData.id) ? 'bg-[#fbbf24]' : 'bg-[#2c2e33]'}`}></div>
                       <div className="hidden md:block absolute -bottom-6 left-1/2 -translate-x-1/2 w-[2px] h-6 bg-[#2c2e33]"></div>
                     </div>
 
@@ -447,7 +435,10 @@ export default function SkillsSchematic() {
                       {chip.rightPinIds.map((pinId) => {
                         const pin = skillsList.find(p => p.id === pinId) || initialSkillsData.find(p => p.id === pinId);
                         if (!pin) return null;
+                        
                         const isActive = activeSkillId === pin.id;
+                        const pinSymbol = pin.symbol || initialSkillsData.find(p => p.id === pinId)?.symbol;
+
                         return (
                           <div 
                             key={pin.id} 
@@ -459,10 +450,10 @@ export default function SkillsSchematic() {
                             <div className={`hidden md:flex items-center w-16 lg:w-32 transition-colors justify-start ${isActive ? 'text-[#fbbf24]' : 'text-[#2c2e33] group-hover:text-gray-500'}`}>
                               <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                               <div className="h-[2px] w-4 bg-current"></div>
-                              {pin.symbol === 'resistor' && <Resistor />}
-                              {pin.symbol === 'crystal' && <Crystal />}
-                              {pin.symbol === 'capacitor' && <Capacitor />}
-                              {pin.symbol === 'switch' && <Switch />}
+                              {pinSymbol === 'resistor' && <Resistor />}
+                              {pinSymbol === 'crystal' && <Crystal />}
+                              {pinSymbol === 'capacitor' && <Capacitor />}
+                              {pinSymbol === 'switch' && <Switch />}
                               <div className="h-[2px] flex-grow bg-current"></div>
                             </div>
                             <span className={`font-mono text-xs md:text-sm mx-3 transition-colors ${isActive ? 'text-[#fbbf24]' : 'text-[#1cebce] group-hover:text-[#1cebce]/80'}`}>{pin.net}</span>
@@ -482,6 +473,12 @@ export default function SkillsSchematic() {
               );
             })}
             
+            <div className="flex w-full h-20 relative hidden md:block">
+              <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <path d="M 45 0 L 45 50 L 50 50 L 50 100" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </div>
+            
             <div className="flex flex-col items-center">
               <div className="md:hidden w-[2px] h-16 bg-[#2c2e33]"></div>
               <div className="w-12 h-[2px] bg-[#1cebce] mb-2 md:mt-0"></div>
@@ -492,15 +489,15 @@ export default function SkillsSchematic() {
 
           </div>
 
-          <div className="w-full lg:w-[40%] mt-12 lg:mt-0 relative lg:left-16 xl:left-34">
-            <div className={`lg:sticky lg:top-32 w-full glass p-10 lg:p-12 shadow-2xl transition-all duration-300 z-50 border-t-4 ${lockedSkill ? 'border-t-[#fbbf24]' : 'border-t-[#1cebce]'} ${activePinData ? 'opacity-100 translate-x-0' : 'opacity-0 lg:translate-x-12 pointer-events-none'}`}>
+          <div className="w-full lg:w-[40%] mt-12 lg:mt-0 relative lg:left-16 xl:left-32">
+            <div className={`lg:sticky lg:top-32 w-full glass p-10 lg:p-12 shadow-2xl transition-all duration-300 z-50 border-t-4 ${lockedSkill ? 'border-t-[#fbbf24]' : 'border-t-[#1cebce]'} ${isValidPin ? 'opacity-100 translate-x-0' : 'opacity-0 lg:translate-x-12 pointer-events-none'}`}>
               <div className="flex justify-between items-center mb-8 border-b border-[#2c2e33] pb-6">
                 <h3 className="text-3xl lg:text-4xl font-bold text-[#f8fafc] tracking-tight">{activePinData?.title}</h3>
                 
-                {isAdmin && activePinData && (
+                {isAdmin && isValidPin && activePinData && (
                   <button 
                     onClick={() => handleEditPin(activePinData)}
-                    className="text-xs text-[#eab308] border border-[#eab308] px-3 py-1 rounded hover:bg-[#eab308] hover:text-white transition-colors ml-4 shrink-0"
+                    className="text-xs text-[#eab308] border border-[#eab308] px-3 py-1 rounded hover:bg-[#eab308] hover:text-white transition-colors ml-4 shrink-0 cursor-pointer relative z-10"
                   >
                     EDIT
                   </button>
@@ -520,6 +517,39 @@ export default function SkillsSchematic() {
           </div>
 
         </div>
+      </div>
+
+      {/* Mobile Informational Modal */}
+      <div 
+        className={`fixed inset-4 glass font-mono flex-col rounded-md border border-[#2c2e33] bg-[#0c0c0e] transition-all duration-500 ease-out z-[100] lg:hidden ${
+          isValidPin ? 'opacity-100 pointer-events-auto flex' : 'opacity-0 pointer-events-none flex'
+        }`}
+      >
+        {isValidPin && activePinData && (
+          <>
+            <div className="bg-[#1c1c1c] p-3 flex justify-between items-center border-b border-[#2c2e33] select-none">
+              <span className="text-xs text-gray-400 font-mono tracking-widest truncate">
+                {activePinData.title}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => { setLockedSkill(null); setHoveredSkill(null); }} className="w-3 h-3 rounded-full bg-[#ef4444] hover:bg-red-400 transition-colors" title="Close Viewer"></button>
+                <div className="w-3 h-3 rounded-full bg-[#eab308]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
+              </div>
+            </div>
+            <div className="p-6 flex flex-col bg-[#0c0c0e] flex-grow overflow-auto">
+              <div className="mb-6">
+                <span className={`text-xs font-mono uppercase tracking-widest px-3 py-1.5 rounded bg-[#1a1b1e] border ${lockedSkill ? 'text-[#fbbf24] border-[#fbbf24]/30' : 'text-[#1cebce] border-[#1cebce]/30'}`}>
+                  {lockedSkill ? '[ STATUS: LATCHED ]' : '[ STATUS: PROBING ]'}
+                </span>
+              </div>
+              <div 
+                className="text-gray-300 leading-relaxed text-sm whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: activePinData.desc || '' }}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {isModalOpen && isAdmin && (
