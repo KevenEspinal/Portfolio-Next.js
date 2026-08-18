@@ -262,14 +262,12 @@ export default function SkillsSchematic() {
     }
   };
 
-  // Securely find active pin data without relying on the 'type' field to support legacy database entries
   const activeSkillId = lockedSkill || hoveredSkill;
   let activePinData = skillsList.find(pin => pin.id === activeSkillId);
   if (!activePinData) {
     activePinData = initialSkillsData.find(pin => pin.id === activeSkillId);
   }
   
-  // A valid informational pin is strictly defined as any object possessing a 'title' (Chips do not have titles)
   const isValidPin = Boolean(activePinData && activePinData.title);
 
   return (
@@ -464,8 +462,27 @@ export default function SkillsSchematic() {
                     </div>
                   </div>
 
-                  {chip.traceOut}
+                  {chipIndex === 0 && (
+                    <div className="group/trace w-full h-32 relative hidden md:block">
+                      <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2 transition-colors" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <path d="M 35 0 L 35 20 L 80 20 L 80 80 L 65 80 L 65 100" vectorEffect="non-scaling-stroke" className="group-hover/trace:stroke-[#fbbf24]" />
+                      </svg>
+                      <div className="absolute top-[20%] left-[80%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
+                      <div className="absolute top-[80%] left-[65%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
+                      <span className="absolute top-[10%] left-[82%] text-xs font-mono text-gray-600 group-hover/trace:text-[#fbbf24] transition-colors">JMP_A1</span>
+                    </div>
+                  )}
                   
+                  {chipIndex === 1 && (
+                    <div className="group/trace w-full h-40 relative hidden md:block">
+                      <svg className="absolute inset-0 w-full h-full stroke-[#2c2e33] fill-none stroke-2 transition-colors" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <path d="M 65 0 L 65 30 L 20 30 L 20 70 L 45 70 L 45 100" vectorEffect="non-scaling-stroke" className="group-hover/trace:stroke-[#fbbf24]" />
+                      </svg>
+                      <div className="absolute top-[30%] left-[20%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
+                      <div className="absolute top-[70%] left-[45%] w-2.5 h-2.5 rounded-full bg-[#0c0c0e] border-2 border-[#2c2e33] group-hover/trace:border-[#fbbf24] transition-colors transform -translate-x-1/2 -translate-y-1/2"></div>
+                    </div>
+                  )}
+
                   {chipIndex < icChipsLayout.length - 1 && (
                     <div className="md:hidden w-[2px] h-16 bg-[#2c2e33] mx-auto"></div>
                   )}
@@ -489,7 +506,7 @@ export default function SkillsSchematic() {
 
           </div>
 
-          <div className="w-full lg:w-[40%] mt-12 lg:mt-0 relative lg:left-16 xl:left-32">
+          <div className="w-full lg:w-[40%] mt-12 lg:mt-0 relative lg:left-16 xl:left-34">
             <div className={`lg:sticky lg:top-32 w-full glass p-10 lg:p-12 shadow-2xl transition-all duration-300 z-50 border-t-4 ${lockedSkill ? 'border-t-[#fbbf24]' : 'border-t-[#1cebce]'} ${isValidPin ? 'opacity-100 translate-x-0' : 'opacity-0 lg:translate-x-12 pointer-events-none'}`}>
               <div className="flex justify-between items-center mb-8 border-b border-[#2c2e33] pb-6">
                 <h3 className="text-3xl lg:text-4xl font-bold text-[#f8fafc] tracking-tight">{activePinData?.title}</h3>
@@ -519,7 +536,6 @@ export default function SkillsSchematic() {
         </div>
       </div>
 
-      {/* Mobile Informational Modal */}
       <div 
         className={`fixed inset-4 glass font-mono flex-col rounded-md border border-[#2c2e33] bg-[#0c0c0e] transition-all duration-500 ease-out z-[100] lg:hidden ${
           isValidPin ? 'opacity-100 pointer-events-auto flex' : 'opacity-0 pointer-events-none flex'
