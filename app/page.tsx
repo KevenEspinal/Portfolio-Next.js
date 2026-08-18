@@ -156,21 +156,27 @@ export default function Home() {
         fetch('/api/projects', { cache: 'no-store' })
       ]);
 
-      const skillsData = await skillsRes.json();
-      if (skillsData && Array.isArray(skillsData)) {
-        const dbNames = skillsData.map((item: any) => item.name);
-        const notInDb = initialSkillsData.filter(skill => !dbNames.includes(skill.name));
-        setSkillsList([...notInDb, ...skillsData]);
-      }
-
       const heroDbData = await heroRes.json();
-      if (heroDbData && heroDbData.name) {
+      const skillsData = await skillsRes.json();
+      const projectsData = await projectsRes.json();
+
+      // We use the presence of Hero data to verify the database has been migrated
+      const isDbActive = Boolean(heroDbData && heroDbData.name);
+
+      if (isDbActive) {
         setHeroData(heroDbData);
       }
 
-      const projectsData = await projectsRes.json();
-      if (projectsData && Array.isArray(projectsData) && projectsData.length === 4) {
-        setProjectsList(projectsData);
+      if (skillsData && Array.isArray(skillsData)) {
+        if (skillsData.length > 0 || isDbActive) {
+          setSkillsList(skillsData);
+        }
+      }
+
+      if (projectsData && Array.isArray(projectsData)) {
+        if (projectsData.length > 0 || isDbActive) {
+          setProjectsList(projectsData);
+        }
       }
 
     } catch (e) {
@@ -622,7 +628,7 @@ export default function Home() {
                   $ {skillsList[selectedSkill].exec}
                 </div>
                 
-                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base overflow-y-auto no-scrollbar max-h-[250px]">
                   {terminalText}
                 </div>
                 
