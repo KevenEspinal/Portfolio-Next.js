@@ -160,7 +160,6 @@ export default function Home() {
       const skillsData = await skillsRes.json();
       const projectsData = await projectsRes.json();
 
-      // We use the presence of Hero data to verify the database has been migrated
       const isDbActive = Boolean(heroDbData && heroDbData.name);
 
       if (isDbActive) {
@@ -628,7 +627,7 @@ export default function Home() {
                   $ {skillsList[selectedSkill].exec}
                 </div>
                 
-                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base overflow-y-auto no-scrollbar max-h-[250px]">
+                <div className="text-white pl-4 md:pl-8 flex-grow whitespace-pre-wrap leading-relaxed text-sm md:text-base">
                   {terminalText}
                 </div>
                 
