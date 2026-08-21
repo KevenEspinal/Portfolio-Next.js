@@ -55,7 +55,6 @@ export default function Work() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Editor States
   const [isEditorExpanded, setIsEditorExpanded] = useState(false);
   const detailsRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +65,8 @@ export default function Work() {
     softwareStr: '',
     skillsStr: '',
     repo: '',
-    images: [] as string[]
+    images: [] as string[],
+    files: [] as { title: string, data: string, filename: string }[]
   });
 
   const fetchLiveWork = async () => {
@@ -109,7 +109,7 @@ export default function Work() {
   };
 
   const handleAddClick = () => {
-    setFormData({ title: '', synopsis: '', details: '', softwareStr: '', skillsStr: '', repo: '', images: [] });
+    setFormData({ title: '', synopsis: '', details: '', softwareStr: '', skillsStr: '', repo: '', images: [], files: [] });
     setEditingId(null);
     setIsEditorExpanded(false);
     setIsModalOpen(true);
@@ -123,14 +123,14 @@ export default function Work() {
       softwareStr: project.software ? project.software.join(', ') : '',
       skillsStr: project.skills ? project.skills.join(', ') : '',
       repo: project.repo || '',
-      images: project.images || []
+      images: project.images || [],
+      files: project.files || []
     });
     setEditingId(project._id);
     setIsEditorExpanded(false);
     setIsModalOpen(true);
   };
 
-  // Custom HTML Tag Injector for the Details Textarea
   const insertFormatting = (before: string, after: string) => {
     const el = detailsRef.current;
     if (!el) return;
@@ -142,7 +142,6 @@ export default function Work() {
     const newText = text.substring(0, start) + before + text.substring(start, end) + after + text.substring(end);
     setFormData({ ...formData, details: newText });
     
-    // Automatically re-focus the user's cursor inside the new tags
     setTimeout(() => {
       el.focus();
       el.setSelectionRange(start + before.length, end + before.length);
@@ -173,6 +172,37 @@ export default function Work() {
     }));
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file: File) => {
+      const reader = new FileReader();
+      const defaultTitle = file.name;
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData(prev => ({
+          ...prev,
+          files: [...(prev.files || []), { title: defaultTitle, data: base64String, filename: file.name }]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveFile = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      files: prev.files.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
+  const handleFileTitleChange = (index: number, newTitle: string) => {
+    const newFiles = [...formData.files];
+    newFiles[index].title = newTitle;
+    setFormData({ ...formData, files: newFiles });
+  };
+
   const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -183,7 +213,8 @@ export default function Work() {
         software: formData.softwareStr.split(',').map(s => s.trim()).filter(Boolean),
         skills: formData.skillsStr.split(',').map(s => s.trim()).filter(Boolean),
         repo: formData.repo,
-        images: formData.images
+        images: formData.images,
+        files: formData.files || []
       };
 
       const method = editingId ? 'PUT' : 'POST';
@@ -355,10 +386,9 @@ export default function Work() {
 
               </div>
 
-              <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full ${openProject === (project._id || project.id) ? 'max-h-[2500px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}`}>
+              <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full ${openProject === (project._id || project.id) ? 'max-h-[3500px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}`}>
                 <div className="p-8 md:p-10 bg-[#1a1b1e] border border-[#2c2e33] rounded-lg text-white flex flex-col gap-6 shadow-xl">
                   
-                  {/* DangerouslySetInnerHTML allows the injected HTML tags from the editor to render perfectly */}
                   <div 
                     className="text-base leading-relaxed text-gray-300 whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{ __html: project.details }}
@@ -380,6 +410,21 @@ export default function Work() {
                       &gt;&gt; Access Source Code Repository
                     </a>
                   )}
+
+                  {project.files && project.files.length > 0 && (
+                    <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-[#2c2e33]/50">
+                      <span className="text-accent font-mono text-sm block">Attached Files:</span>
+                      <div className="flex flex-wrap gap-4">
+                        {project.files.map((file: any, fIdx: number) => (
+                          <a key={fIdx} href={file.data} download={file.filename} className="flex items-center gap-2 px-4 py-2 bg-[#0c0c0e] border border-[#2c2e33] rounded hover:border-[#1cebce] text-gray-300 hover:text-white transition-colors text-sm font-mono group">
+                            <svg className="w-4 h-4 text-gray-500 group-hover:text-[#1cebce] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            {file.title}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
 
@@ -391,7 +436,6 @@ export default function Work() {
       {isModalOpen && isAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsModalOpen(false)}></div>
-          
           <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.9)] z-10 text-[#d1d0c5] font-mono max-h-[90vh] overflow-y-auto">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1cebce] to-transparent opacity-50"></div>
             
@@ -405,13 +449,11 @@ export default function Work() {
                 <label className="text-xs text-gray-500 mb-1">PROJECT_TITLE</label>
                 <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
               </div>
-              
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">SYNOPSIS</label>
                 <input required type="text" value={formData.synopsis} onChange={e => setFormData({...formData, synopsis: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" />
               </div>
 
-              {/* Advanced Expandable Text Editor */}
               <div className={`transition-all duration-300 ${isEditorExpanded ? 'fixed inset-4 md:inset-12 z-[200] bg-[#0a0a0c] border border-[#1cebce] rounded-2xl p-6 md:p-8 flex flex-col shadow-[0_0_100px_rgba(28,235,206,0.15)]' : 'flex flex-col relative'}`}>
                 
                 <div className="flex justify-between items-end mb-2">
@@ -421,7 +463,6 @@ export default function Work() {
                   )}
                 </div>
 
-                {/* Formatting Toolbar */}
                 <div className="flex items-center gap-2 mb-2 p-1.5 bg-[#1a1b1e] border border-[#2c2e33] rounded overflow-x-auto no-scrollbar">
                   <button type="button" onClick={() => insertFormatting('<b>', '</b>')} className="px-3 py-1 bg-[#0c0c0e] rounded text-xs hover:text-[#1cebce] transition-colors border border-transparent hover:border-[#1cebce]">
                     <span className="font-bold">B</span>
@@ -451,7 +492,7 @@ export default function Work() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-500 mb-1">SOFTWARE & TOOLS (Comma separated)</label>
                   <input type="text" value={formData.softwareStr} onChange={e => setFormData({...formData, softwareStr: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="C++, PlatformIO" />
@@ -461,14 +502,13 @@ export default function Work() {
                   <input type="text" value={formData.skillsStr} onChange={e => setFormData({...formData, skillsStr: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="Embedded Systems" />
                 </div>
               </div>
-              
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1">REPOSITORY_URL</label>
                 <input type="text" value={formData.repo} onChange={e => setFormData({...formData, repo: e.target.value})} className="bg-transparent border-b-2 border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-2" placeholder="https://github.com/..." />
               </div>
 
               <div className="flex flex-col gap-2 pt-2">
-                <label className="text-xs text-gray-500 uppercase tracking-widest">Upload Multiple Images</label>
+                <label className="text-xs text-[#1cebce] uppercase tracking-widest">Upload Multiple Images</label>
                 <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-mono file:bg-[#1cebce] file:text-black hover:file:opacity-90 cursor-pointer" />
                 
                 {formData.images.length > 0 && (
@@ -477,6 +517,27 @@ export default function Work() {
                       <div key={idx} className="relative h-20 rounded border border-[#2c2e33] overflow-hidden group">
                         <img src={img} alt="Upload preview" className="object-cover w-full h-full" />
                         <button type="button" onClick={() => handleRemoveImage(idx)} className="absolute inset-0 bg-black/60 text-red-500 font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                          REMOVE
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 pt-4 border-t border-[#2c2e33]">
+                <label className="text-xs text-[#1cebce] uppercase tracking-widest">Attach Supplementary Files</label>
+                <input type="file" multiple onChange={handleFileUpload} className="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-mono file:bg-[#1cebce] file:text-black hover:file:opacity-90 cursor-pointer" />
+                
+                {formData.files && formData.files.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    {formData.files.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-4 bg-[#1a1b1e] p-2 rounded border border-[#2c2e33]">
+                        <div className="flex flex-col flex-grow">
+                          <label className="text-[10px] text-gray-500">File Display Name</label>
+                          <input type="text" value={file.title} onChange={e => handleFileTitleChange(idx, e.target.value)} className="bg-transparent border-b border-[#2c2e33] focus:border-[#1cebce] outline-none text-[#f8fafc] py-1 text-sm" placeholder="e.g. EGR106_Report.pdf" />
+                        </div>
+                        <button type="button" onClick={() => handleRemoveFile(idx)} className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded transition-colors text-xs border border-red-500">
                           REMOVE
                         </button>
                       </div>
