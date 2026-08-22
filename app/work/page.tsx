@@ -311,7 +311,7 @@ export default function Work() {
           <div className="flex items-center gap-6">
             <div>
               <h1 className="text-5xl md:text-6xl font-bold text-[#f8fafc] tracking-tight">Project Archive</h1>
-              <p className="text-gray-400 mt-4 text-lg">Detailed documentation of engineering and software developments</p>
+              <p className="text-gray-400 mt-4 text-lg">Detailed documentation of engineering and software developments: Press <kbd>&lt;/&gt;</kbd> for full detail explanation.</p>
             </div>
             {isAdmin && (
               <div className="flex items-center gap-4">
