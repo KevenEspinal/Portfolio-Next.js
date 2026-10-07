@@ -145,20 +145,26 @@ export default function Home() {
     name: '', colorClass: 'text-[#1cebce]', cmd: '', exec: '', description: '', link: '#work', linkText: ''
   });
 
+  const [resumeUrl, setResumeUrl] = useState<string>('/resume.pdf');
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const [pendingResume, setPendingResume] = useState<string | null>(null);
+
   const lastScrollTime = useRef(0);
   const toolkitRef = useRef<HTMLDivElement>(null);
 
   const fetchLiveContent = async () => {
     try {
-      const [skillsRes, heroRes, projectsRes] = await Promise.all([
+      const [skillsRes, heroRes, projectsRes, resumeRes] = await Promise.all([
         fetch('/api/toolkit', { cache: 'no-store' }),
         fetch('/api/hero', { cache: 'no-store' }),
-        fetch('/api/projects', { cache: 'no-store' })
+        fetch('/api/projects', { cache: 'no-store' }),
+        fetch('/api/resume', { cache: 'no-store' })
       ]);
 
       const heroDbData = await heroRes.json();
       const skillsData = await skillsRes.json();
       const projectsData = await projectsRes.json();
+      const resumeDbData = await resumeRes.json();
 
       const isDbActive = Boolean(heroDbData && heroDbData.name);
 
@@ -176,6 +182,10 @@ export default function Home() {
         if (projectsData.length > 0 || isDbActive) {
           setProjectsList(projectsData);
         }
+      }
+
+      if (resumeDbData && resumeDbData.url) {
+        setResumeUrl(resumeDbData.url);
       }
 
     } catch (e) {
@@ -310,6 +320,40 @@ export default function Home() {
       }
       setIsProjectModalOpen(false);
       fetchLiveContent();
+    } catch (error) {
+      alert("Network Error");
+    }
+  };
+
+  const handleResumeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPendingResume(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveResume = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingResume) return;
+
+    try {
+      const res = await fetch('/api/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: pendingResume }),
+      });
+
+      if (res.ok) {
+        setResumeUrl(pendingResume);
+        setIsResumeModalOpen(false);
+        setPendingResume(null);
+      } else {
+        alert("Failed to update resume.");
+      }
     } catch (error) {
       alert("Network Error");
     }
@@ -488,8 +532,18 @@ export default function Home() {
                 <div key={idx} className="text-2xl md:text-3xl font-light text-gray-400">{role}</div>
               ))}
             </div>
-            <div className="flex gap-6 mt-8">
-              <Link href="/resume.pdf" target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">/resume</Link>
+            <div className="flex gap-6 mt-8 items-center">
+              <Link href={resumeUrl} target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">/resume</Link>
+              
+              {isAdmin && (
+                <button 
+                  onClick={() => setIsResumeModalOpen(true)}
+                  className="text-xs text-[#eab308] border border-[#eab308] px-3 py-3 rounded hover:bg-[#eab308] hover:text-black font-mono transition-colors"
+                >
+                  EDIT RESUME
+                </button>
+              )}
+
               <Link href="https://github.com/KevenEspinal" target="_blank" className="px-8 py-3 border border-[#404245] text-gray-300 hover:border-accent hover:text-accent font-semibold rounded jump-card font-mono text-sm">/github</Link>
             </div>
           </div>
@@ -664,6 +718,39 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {isResumeModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0c0c0e]/80 backdrop-blur-md cursor-pointer" onClick={() => setIsResumeModalOpen(false)}></div>
+          <div className="relative w-full max-w-md bg-[#0a0a0c] border border-[#2c2e33] rounded-3xl p-8 shadow-2xl z-10 text-[#d1d0c5] font-mono">
+            <div className="flex justify-between items-center mb-6 border-b border-[#2c2e33] pb-4">
+              <p className="text-[#eab308] font-bold text-lg">Update Resume File</p>
+              <button onClick={() => setIsResumeModalOpen(false)} className="text-gray-600 hover:text-[#f8fafc] text-sm">[ ESC ]</button>
+            </div>
+            <form onSubmit={handleSaveResume} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-gray-500 uppercase tracking-widest">Select PDF File</label>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleResumeFileUpload}
+                  className="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-mono file:bg-[#1cebce] file:text-black hover:file:opacity-90 cursor-pointer"
+                />
+              </div>
+              {pendingResume && (
+                <p className="text-xs text-[#1cebce]">File converted to Base64 and ready.</p>
+              )}
+              <button
+                type="submit"
+                disabled={!pendingResume}
+                className="border border-[#eab308] rounded-xl text-[#eab308] hover:bg-[#eab308] hover:text-black disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-[#eab308] transition-colors py-3 font-bold tracking-widest text-sm uppercase"
+              >
+                Push Resume to Database
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isAddModalOpen && isAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
