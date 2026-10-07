@@ -259,6 +259,30 @@ export default function Home() {
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
+  const handleViewResume = () => {
+    if (!resumeUrl) return;
+
+    if (resumeUrl.startsWith('data:application/pdf')) {
+      const base64Parts = resumeUrl.split(',');
+      const mimeString = base64Parts[0].split(':')[1].split(';')[0];
+      const byteString = atob(base64Parts[1]);
+      
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([arrayBuffer], { type: mimeString });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      window.open(blobUrl, '_blank');
+    } else {
+      window.open(resumeUrl, '_blank');
+    }
+  };
+
   const handleHeroEditClick = () => {
     setHeroFormData(heroData);
     setIsHeroModalOpen(true);
@@ -533,7 +557,12 @@ export default function Home() {
               ))}
             </div>
             <div className="flex gap-6 mt-8 items-center">
-              <Link href={resumeUrl} target="_blank" className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm">/resume</Link>
+              <button 
+                onClick={handleViewResume} 
+                className="px-8 py-3 border border-accent text-accent hover:bg-[#1cebce]/10 font-semibold rounded jump-card font-mono text-sm"
+              >
+                /resume
+              </button>
               
               {isAdmin && (
                 <button 
